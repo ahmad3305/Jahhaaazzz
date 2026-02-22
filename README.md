@@ -2,7 +2,7 @@
 
 ## 👋 About This Project
 
-So basically, this project is a complete **Airport Management System** that we built to simulate how a real airline operates.
+This project is a complete **Airport Management System** that we built to simulate how a real airline operates.
 
 It’s not just about booking tickets — it handles flights, passengers, cargo, staff, payments, incidents, and more. We tried to keep everything realistic and properly connected using foreign keys.
 
