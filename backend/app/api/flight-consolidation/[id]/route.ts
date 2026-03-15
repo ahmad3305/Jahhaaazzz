@@ -18,12 +18,13 @@ function requireAdmin(request: NextRequest) {
   return user && user.role === 'Admin' ? user : null;
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = requireAdmin(request);
   if (!user) return errorResponse('Admin access required', 403);
 
   try {
-    const consolidationId = parseInt(params.id, 10);
+    const { id } = await params;
+    const consolidationId = parseInt(id, 10);
     if (isNaN(consolidationId)) return errorResponse('Invalid consolidation ID', 400);
 
     const consolidation = await queryOne<any>(
@@ -79,12 +80,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = requireAdmin(request);
   if (!user) return errorResponse('Admin access required', 403);
 
   try {
-    const consolidationId = parseInt(params.id, 10);
+    const { id } = await params;
+    const consolidationId = parseInt(id, 10);
     if (isNaN(consolidationId)) return errorResponse('Invalid consolidation ID', 400);
 
     const existing = await queryOne<any>(
@@ -137,12 +139,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = requireAdmin(request);
   if (!user) return errorResponse('Admin access required', 403);
 
   try {
-    const consolidationId = parseInt(params.id, 10);
+    const { id } = await params;
+    const consolidationId = parseInt(id, 10);
     if (isNaN(consolidationId)) return errorResponse('Invalid consolidation ID', 400);
 
     const existing = await queryOne<any>(

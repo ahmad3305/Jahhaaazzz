@@ -5,10 +5,11 @@ import { flightUpdateSchema, validateData } from '@/lib/validations';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const flightId = parseInt(params.id);
+    const { id } = await params;
+    const flightId = parseInt(id);
 
     if (isNaN(flightId)) {
       return errorResponse('Invalid flight ID', 400);
@@ -51,10 +52,11 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const flightId = parseInt(params.id);
+    const { id } = await params;
+    const flightId = parseInt(id);
 
     if (isNaN(flightId)) {
       return errorResponse('Invalid flight ID', 400);
@@ -199,10 +201,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const flightId = parseInt(params.id);
+    const { id } = await params;
+    const flightId = parseInt(id);
 
     if (isNaN(flightId)) {
       return errorResponse('Invalid flight ID', 400);
