@@ -1,9 +1,8 @@
-
 import { z } from 'zod';
 
 export const airportCreateSchema = z.object({
   airport_name: z.string().min(1).max(255),
-  airport_code: z.string().length(3).or(z.string().length(4)),
+  airport_code: z.string().length(3).or(z.string().length(4)), // IATA or ICAO
   city: z.string().min(1).max(100),
   country: z.string().min(1).max(100),
   timezone: z.string().min(1).max(100),
@@ -39,7 +38,7 @@ export const aircraftCreateSchema = z.object({
   first_class_seats: z.number().int().min(0),
   max_speed_kmh: z.number().int().positive(),
   fuel_capacity_litres: z.number().int().positive(),
-  manufactered_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  manufactered_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // YYYY-MM-DD
   latest_maintenance: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   next_maintenance_due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   current_airport: z.number().int().positive(),
@@ -53,7 +52,7 @@ export const flightCreateSchema = z.object({
   source_airport_id: z.number().int().positive(),
   destination_airport_id: z.number().int().positive(),
   flight_type: z.enum(['Passenger', 'Cargo', 'Private']).default('Passenger'),
-  estimated_duration: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),
+  estimated_duration: z.string().regex(/^\d{2}:\d{2}:\d{2}$/), // HH:MM:SS
 });
 
 export const flightUpdateSchema = flightCreateSchema.partial();
@@ -61,7 +60,7 @@ export const flightUpdateSchema = flightCreateSchema.partial();
 export const flightScheduleCreateSchema = z.object({
   flight_id: z.number().int().positive(),
   aircraft_id: z.number().int().positive(),
-  departure_datetime: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
+  departure_datetime: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/), // YYYY-MM-DD HH:MM:SS
   arrival_datetime: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
   gate_id: z.number().int().positive(),
   flight_status: z.enum(['Scheduled', 'Boarding', 'Departed', 'Delayed', 'Cancelled', 'Completed', 'Consolidated']).default('Scheduled'),
@@ -120,6 +119,7 @@ export const paymentCreateSchema = z.object({
 });
 
 export const paymentUpdateSchema = paymentCreateSchema.partial();
+
 
 
 export function validateData<T>(
@@ -315,3 +315,31 @@ export const taskAssignmentUpdateSchema = z.object({
   assignment_status: z.enum(['Assigned', 'Completed', 'Cancelled']).optional(),
   end_time: z.string().optional(),
 });
+
+
+
+export const runwayAvailabilitySchema = z.object({
+  airport_id: z.number().int().positive(),
+  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), 
+  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),   
+  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),     
+});
+
+export const privateRunwayBookingCreateSchema = z.object({
+  private_aircraft_id: z.number().int().positive(),
+  runway_id: z.number().int().positive(),
+  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), 
+  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),   
+  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),     
+});
+
+
+export const privateAircraftCreateSchema = z.object({
+  registration_number: z.string().min(1).max(50),
+  model_name: z.string().min(1).max(100).optional().nullable(),
+  manufacturer: z.string().min(1).max(100).optional().nullable(),
+  seat_capacity: z.number().int().min(1).optional().nullable(),
+  status: z.enum(['Active', 'Maintenance', 'Retired']).optional().default('Active'),
+});
+
+export const privateAircraftUpdateSchema = privateAircraftCreateSchema.partial();
