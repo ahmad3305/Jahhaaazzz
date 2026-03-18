@@ -80,6 +80,10 @@ const TASK_TYPES_WITH_OVERLAP = [
   'Technical Check',
 ] as const;
 
+function formatSqlDateTimeUTC(dt: Date) {
+  return dt.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 async function getRequirementsForSchedule(flight_schedule_id: number): Promise<CrewRequirementRow[]> {
   const rows = await query<any[]>(
     `SELECT role_required, number_required
@@ -140,8 +144,8 @@ async function findAvailableStaffIdsForRole(params: {
       startTime,
       endTime,
       ...TASK_TYPES_WITH_OVERLAP,
-      scheduleEnd.toISOString().slice(0, 19).replace('T', ' '),
-      scheduleStart.toISOString().slice(0, 19).replace('T', ' '),
+      formatSqlDateTimeUTC(scheduleEnd),
+      formatSqlDateTimeUTC(scheduleStart),
     ]
   );
 
@@ -358,4 +362,84 @@ export async function releaseStaffForSchedule(flight_schedule_id: number) {
        AND task_status IN ('Pending','Assigned','In Progress')`,
     [flight_schedule_id]
   );
+}
+
+export async function suggestNextScheduleWindow(params: {
+  flight_schedule_id: number;
+  stepMinutes?: number;
+  horizonHours?: number;
+  minLeadMinutes?: number;
+}): Promise<null | { new_departure_datetime: string; new_arrival_datetime: string; delay_minutes: number }> {
+  const { flight_schedule_id } = params;
+  const stepMinutes = params.stepMinutes ?? 30;
+  const horizonHours = params.horizonHours ?? 12;
+  const minLeadMinutes = params.minLeadMinutes ?? 10;
+
+  const schedule = await queryOne<any>(
+    `SELECT flight_schedule_id, departure_datetime, arrival_datetime
+     FROM Flight_schedules
+     WHERE flight_schedule_id = ?`,
+    [flight_schedule_id]
+  );
+
+  if (!schedule?.departure_datetime || !schedule?.arrival_datetime) return null;
+
+  const originalDeparture = toDate(schedule.departure_datetime);
+  const originalArrival = toDate(schedule.arrival_datetime);
+  const durationMs = originalArrival.getTime() - originalDeparture.getTime();
+  if (durationMs <= 0) return null;
+
+  const requirements = await getRequirementsForSchedule(flight_schedule_id);
+  if (requirements.length === 0) return null;
+
+  const now = new Date();
+  const startSearch = new Date(now.getTime() + minLeadMinutes * 60 * 1000);
+  const endSearch = new Date(now.getTime() + horizonHours * 60 * 60 * 1000);
+
+  let cursor = new Date(startSearch);
+  cursor.setUTCSeconds(0, 0);
+  const m = cursor.getUTCMinutes();
+  const rem = m % stepMinutes;
+  if (rem !== 0) cursor.setUTCMinutes(m + (stepMinutes - rem));
+
+  while (cursor <= endSearch) {
+    const candidateStart = new Date(cursor);
+    const candidateEnd = new Date(candidateStart.getTime() + durationMs);
+
+    if (extractDatePart(candidateStart) !== extractDatePart(candidateEnd)) {
+      cursor = new Date(cursor.getTime() + stepMinutes * 60 * 1000);
+      continue;
+    }
+
+    let ok = true;
+    for (const req of requirements) {
+      const available = await findAvailableStaffIdsForRole({
+        role: req.role_required,
+        scheduleStart: candidateStart,
+        scheduleEnd: candidateEnd,
+      });
+
+      if (available.length < req.number_required) {
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) {
+      const delayMinutes = Math.max(
+        0,
+        Math.round((candidateStart.getTime() - originalDeparture.getTime()) / (60 * 1000))
+      );
+
+      return {
+        new_departure_datetime: formatSqlDateTimeUTC(candidateStart),
+        new_arrival_datetime: formatSqlDateTimeUTC(candidateEnd),
+        delay_minutes: delayMinutes,
+      };
+    }
+
+    cursor = new Date(cursor.getTime() + stepMinutes * 60 * 1000);
+  }
+
+  return null;
 }
