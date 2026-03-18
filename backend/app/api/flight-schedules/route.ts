@@ -205,11 +205,17 @@ export async function POST(request: NextRequest) {
     const newStatus = statusFromCrewValidation(crewRes);
 
     await query(
-      `UPDATE Flight_schedules SET flight_status = ? WHERE flight_schedule_id = ?`,
-      [newStatus, flight_schedule_id]
+      `UPDATE Flight_schedules 
+       SET flight_status = ?, 
+           delay_reason = ?
+       WHERE flight_schedule_id = ?`,
+      [
+        newStatus,
+        newStatus === 'Delayed' ? 'Crew Issue' : null,
+        flight_schedule_id
+      ]
     );
 
-    // Fetch created schedule
     const newSchedule = await queryOne(
       `SELECT 
         fs.*,
