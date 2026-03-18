@@ -225,14 +225,13 @@ export async function PUT(
       values
     );
 
-    if (
-      updateData.flight_status === 'Cancelled' ||
-      updateData.flight_status === 'Completed' ||
-      updateData.flight_status === 'Consolidated'
-    ) {
-      await releaseStaffForSchedule(scheduleId);
+    if (updateData.flight_status === 'Cancelled') {
+      const dep = new Date(existing.departure_datetime);
+      if (!isNaN(dep.getTime()) && dep.getTime() > Date.now()) {
+        await releaseStaffForSchedule(scheduleId, 'all');
+      }
     }
-
+    
     const updatedSchedule = await queryOne(
       `SELECT 
         fs.*,
@@ -305,14 +304,17 @@ export async function DELETE(
         ['Cancelled', scheduleId, 'Cancelled']
       );
 
-      await releaseStaffForSchedule(scheduleId);
+      const dep = new Date(existing.departure_datetime);
+      if (!isNaN(dep.getTime()) && dep.getTime() > Date.now()) {
+        await releaseStaffForSchedule(scheduleId, 'all');
+      }
 
       return successResponse(
         { flight_schedule_id: scheduleId, status: 'Cancelled', tickets_cancelled: ticketCount.count },
         'Flight schedule cancelled successfully'
       );
     } else {
-      await releaseStaffForSchedule(scheduleId);
+      await releaseStaffForSchedule(scheduleId, 'all');
 
       await query('DELETE FROM Flight_schedules WHERE flight_schedule_id = ?', [scheduleId]);
 
