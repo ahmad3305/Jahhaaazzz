@@ -63,7 +63,11 @@ export const flightScheduleCreateSchema = z.object({
   departure_datetime: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/), // YYYY-MM-DD HH:MM:SS
   arrival_datetime: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
   gate_id: z.number().int().positive(),
-  flight_status: z.enum(['Scheduled', 'Boarding', 'Departed', 'Delayed', 'Cancelled', 'Completed', 'Consolidated']).default('Scheduled'),
+  flight_status: z
+    .enum(['Scheduled', 'Boarding', 'Departed', 'Delayed', 'Cancelled', 'Completed', 'Consolidated'])
+    .default('Scheduled'),
+  delay_minutes: z.number().int().min(0).optional().default(0),
+  delay_reason: z.string().min(1).max(255).optional().nullable(),
 });
 
 export const flightScheduleUpdateSchema = flightScheduleCreateSchema.partial();
@@ -104,7 +108,9 @@ export const cargoCreateSchema = z.object({
   sender_contact: z.string().min(1).max(50),
   reciever_name: z.string().min(1).max(50),
   reciever_contact: z.string().min(1).max(50),
-  status: z.enum(['Booked', 'Loaded', 'In Transit', 'Unloaded', 'Customs Hold', 'Delivered', 'Cancelled']).default('Booked'),
+  status: z
+    .enum(['Booked', 'Loaded', 'In Transit', 'Unloaded', 'Customs Hold', 'Delivered', 'Cancelled'])
+    .default('Booked'),
   is_insured: z.boolean().default(false),
 });
 
@@ -120,10 +126,8 @@ export const paymentCreateSchema = z.object({
 
 export const paymentUpdateSchema = paymentCreateSchema.partial();
 
-
-
 export function validateData<T>(
-  schema: z.ZodSchema<T>, 
+  schema: z.ZodSchema<T>,
   data: any
 ): { success: boolean; data?: T; errors?: any } {
   try {
@@ -131,12 +135,12 @@ export function validateData<T>(
     return { success: true, data: validated };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { 
-        success: false, 
-        errors: error.issues.map(issue => ({
+      return {
+        success: false,
+        errors: error.issues.map((issue) => ({
           path: issue.path.join('.'),
-          message: issue.message
-        }))
+          message: issue.message,
+        })),
       };
     }
     return { success: false, errors: [{ message: 'Validation failed' }] };
@@ -250,13 +254,21 @@ export const flightIncidentUpdateSchema = z.object({
   flight_status: z.enum(['Open', 'Resolved']).optional(),
 });
 
-
-
 export const staffCreateSchema = z.object({
   airport_id: z.number().int().positive(),
   first_name: z.string().min(1).max(50),
   last_name: z.string().min(1).max(50),
-  role: z.enum(['Pilot', 'Co-Pilot', 'Cabin Crew', 'Check-in Staff', 'Boarding Staff', 'Baggage Handler', 'Ramp Operator', 'Maintenance Crew', 'Supervisor']),
+  role: z.enum([
+    'Pilot',
+    'Co-Pilot',
+    'Cabin Crew',
+    'Check-in Staff',
+    'Boarding Staff',
+    'Baggage Handler',
+    'Ramp Operator',
+    'Maintenance Crew',
+    'Supervisor',
+  ]),
   staff_type: z.enum(['Flight Crew', 'Ground Staff']),
   hire_date: z.string().optional(),
   license_number: z.string().max(100).optional(),
@@ -266,7 +278,17 @@ export const staffCreateSchema = z.object({
 export const staffUpdateSchema = z.object({
   first_name: z.string().min(1).max(50).optional(),
   last_name: z.string().min(1).max(50).optional(),
-  role: z.enum(['Pilot', 'Co-Pilot', 'Cabin Crew', 'Check-in Staff', 'Boarding Staff', 'Baggage Handler', 'Ramp Operator', 'Maintenance Crew', 'Supervisor']).optional(),
+  role: z.enum([
+    'Pilot',
+    'Co-Pilot',
+    'Cabin Crew',
+    'Check-in Staff',
+    'Boarding Staff',
+    'Baggage Handler',
+    'Ramp Operator',
+    'Maintenance Crew',
+    'Supervisor',
+  ]).optional(),
   staff_type: z.enum(['Flight Crew', 'Ground Staff']).optional(),
   license_number: z.string().max(100).optional(),
   status: z.enum(['Active', 'On Leave', 'Inactive']).optional(),
@@ -289,7 +311,15 @@ export const shiftUpdateSchema = z.object({
 
 export const taskCreateSchema = z.object({
   flight_schedule_id: z.number().int().positive(),
-  task_type: z.enum(['Pilot Operation', 'Cabin Preparation', 'Boarding', 'Baggage Loading', 'Baggage Unloading', 'Aircraft Cleaning', 'Technical Check']),
+  task_type: z.enum([
+    'Pilot Operation',
+    'Cabin Preparation',
+    'Boarding',
+    'Baggage Loading',
+    'Baggage Unloading',
+    'Aircraft Cleaning',
+    'Technical Check',
+  ]),
   required_role: z.string().min(1).max(100),
   start_time: z.string(),
   end_time: z.string(),
@@ -297,7 +327,15 @@ export const taskCreateSchema = z.object({
 });
 
 export const taskUpdateSchema = z.object({
-  task_type: z.enum(['Pilot Operation', 'Cabin Preparation', 'Boarding', 'Baggage Loading', 'Baggage Unloading', 'Aircraft Cleaning', 'Technical Check']).optional(),
+  task_type: z.enum([
+    'Pilot Operation',
+    'Cabin Preparation',
+    'Boarding',
+    'Baggage Loading',
+    'Baggage Unloading',
+    'Aircraft Cleaning',
+    'Technical Check',
+  ]).optional(),
   required_role: z.string().min(1).max(100).optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
@@ -316,23 +354,20 @@ export const taskAssignmentUpdateSchema = z.object({
   end_time: z.string().optional(),
 });
 
-
-
 export const runwayAvailabilitySchema = z.object({
   airport_id: z.number().int().positive(),
-  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), 
-  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),   
-  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),     
+  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),
+  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),
 });
 
 export const privateRunwayBookingCreateSchema = z.object({
   private_aircraft_id: z.number().int().positive(),
   runway_id: z.number().int().positive(),
-  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), 
-  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),   
-  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),     
+  booking_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),
+  end_time: z.string().regex(/^\d{2}:\d{2}:\d{2}$/),
 });
-
 
 export const privateAircraftCreateSchema = z.object({
   registration_number: z.string().min(1).max(50),
