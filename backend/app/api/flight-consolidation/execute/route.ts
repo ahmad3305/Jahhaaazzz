@@ -20,6 +20,14 @@ function requireAdmin(request: NextRequest) {
   return user && user.role === 'Admin' ? user : null;
 }
 
+function requireAdminOrCron(request: NextRequest) {
+  const cronSecret = request.headers.get('x-cron-secret') || '';
+  const expected = process.env.CRON_SECRET || '';
+  if (expected && cronSecret === expected) return { role: 'Cron' } as any;
+
+  return requireAdmin(request);
+}
+
 class MaxHeap<T> {
   private a: T[] = [];
   constructor(private score: (x: T) => number) {}
@@ -71,7 +79,7 @@ async function getConnection() {
 }
 
 export async function POST(request: NextRequest) {
-  const user = requireAdmin(request);
+  const user = requireAdminOrCron(request);
   if (!user) return errorResponse('Admin access required', 403);
 
   let connection: mysql.Connection | undefined;
