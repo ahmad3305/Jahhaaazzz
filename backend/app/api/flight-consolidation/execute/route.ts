@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { successResponse, errorResponse } from '@/lib/response';
 import { verifyToken } from '@/lib/auth';
 import mysql from 'mysql2/promise';
+import { releaseStaffForSchedule } from '@/utils/crew-validator';
 
 type Candidate = {
   flight_schedule_id: number;
@@ -74,6 +75,8 @@ export async function POST(request: NextRequest) {
   if (!user) return errorResponse('Admin access required', 403);
 
   let connection: mysql.Connection | undefined;
+
+  let sourceScheduleIdToRelease: number | null = null;
 
   try {
     const body = await request.json();
@@ -213,10 +216,9 @@ export async function POST(request: NextRequest) {
 
       moves.push({ ticket_id: ticketId, from: source_flight_schedule_id, to: best.flight_schedule_id });
 
-      best.available_seats -= 1; // consume a seat
+      best.available_seats -= 1;
       heap.push(best);
     }
-
 
     for (const m of moves) {
       await connection.execute(
@@ -266,6 +268,9 @@ export async function POST(request: NextRequest) {
     );
 
     await connection.commit();
+
+    sourceScheduleIdToRelease = source_flight_schedule_id;
+    await releaseStaffForSchedule(sourceScheduleIdToRelease, 'all');
 
     return successResponse(
       {
