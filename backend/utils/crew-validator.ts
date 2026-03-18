@@ -373,7 +373,7 @@ export async function suggestNextScheduleWindow(params: {
   const { flight_schedule_id } = params;
   const stepMinutes = params.stepMinutes ?? 30;
   const horizonHours = params.horizonHours ?? 12;
-  const minLeadMinutes = params.minLeadMinutes ?? 10;
+  const minLeadMinutes = params.minLeadMinutes ?? 60;
 
   const schedule = await queryOne<any>(
     `SELECT flight_schedule_id, departure_datetime, arrival_datetime
