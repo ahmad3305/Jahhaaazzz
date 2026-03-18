@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, noContentResponse, validationErrorResponse } from '@/lib/response';
 import { flightScheduleUpdateSchema, validateData } from '@/lib/validations';
+import { releaseStaffForSchedule } from '@/utils/crew-validator';
 
 export async function GET(
   request: NextRequest,
@@ -224,6 +225,14 @@ export async function PUT(
       values
     );
 
+    if (
+      updateData.flight_status === 'Cancelled' ||
+      updateData.flight_status === 'Completed' ||
+      updateData.flight_status === 'Consolidated'
+    ) {
+      await releaseStaffForSchedule(scheduleId);
+    }
+
     const updatedSchedule = await queryOne(
       `SELECT 
         fs.*,
@@ -296,11 +305,15 @@ export async function DELETE(
         ['Cancelled', scheduleId, 'Cancelled']
       );
 
+      await releaseStaffForSchedule(scheduleId);
+
       return successResponse(
         { flight_schedule_id: scheduleId, status: 'Cancelled', tickets_cancelled: ticketCount.count },
         'Flight schedule cancelled successfully'
       );
     } else {
+      await releaseStaffForSchedule(scheduleId);
+
       await query('DELETE FROM Flight_schedules WHERE flight_schedule_id = ?', [scheduleId]);
 
       return noContentResponse();
