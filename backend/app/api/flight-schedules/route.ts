@@ -3,6 +3,9 @@ import { query, queryOne } from '@/lib/db';
 import { successResponse, errorResponse, createdResponse, validationErrorResponse } from '@/lib/response';
 import { flightScheduleCreateSchema, validateData } from '@/lib/validations';
 
+import { statusFromCrewValidation } from '@/utils/flight-status';
+import { createTasksForSchedule, autoAssignStaffForSchedule } from '@/utils/crew-validator';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -97,20 +100,21 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data!;
 
-    const flight = await queryOne(
-      'SELECT * FROM Flights WHERE flight_id = ?',
-      [data.flight_id]
-    );
+    const crew_requirements = (body?.crew_requirements || []) as Array<{
+      role_required: string;
+      number_required: number;
+    }>;
 
+    if (!Array.isArray(crew_requirements) || crew_requirements.length === 0) {
+      return errorResponse('crew_requirements is required', 400);
+    }
+
+    const flight = await queryOne('SELECT * FROM Flights WHERE flight_id = ?', [data.flight_id]);
     if (!flight) {
       return errorResponse('Flight not found', 404);
     }
 
-    const aircraft = await queryOne<any>(
-      'SELECT * FROM Aircraft WHERE aircraft_id = ?',
-      [data.aircraft_id]
-    );
-
+    const aircraft = await queryOne<any>('SELECT * FROM Aircraft WHERE aircraft_id = ?', [data.aircraft_id]);
     if (!aircraft) {
       return errorResponse('Aircraft not found', 404);
     }
@@ -119,11 +123,7 @@ export async function POST(request: NextRequest) {
       return errorResponse('Aircraft is not active', 400);
     }
 
-    const gate = await queryOne(
-      'SELECT * FROM Gates WHERE gate_id = ?',
-      [data.gate_id]
-    );
-
+    const gate = await queryOne('SELECT * FROM Gates WHERE gate_id = ?', [data.gate_id]);
     if (!gate) {
       return errorResponse('Gate not found', 404);
     }
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         data.aircraft_id,
         data.departure_datetime, data.departure_datetime,
         data.arrival_datetime, data.arrival_datetime,
-        data.departure_datetime, data.arrival_datetime
+        data.departure_datetime, data.arrival_datetime,
       ]
     );
 
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         data.gate_id,
         data.departure_datetime, data.departure_datetime,
         data.arrival_datetime, data.arrival_datetime,
-        data.departure_datetime, data.arrival_datetime
+        data.departure_datetime, data.arrival_datetime,
       ]
     );
 
@@ -182,15 +182,34 @@ export async function POST(request: NextRequest) {
         flight_id, aircraft_id, departure_datetime, 
         arrival_datetime, gate_id, flight_status
       ) VALUES (?, ?, ?, ?, ?, 'Scheduled')`,
-      [
-        data.flight_id,
-        data.aircraft_id,
-        data.departure_datetime,
-        data.arrival_datetime,
-        data.gate_id
-      ]
+      [data.flight_id, data.aircraft_id, data.departure_datetime, data.arrival_datetime, data.gate_id]
     );
 
+    const flight_schedule_id = Number(result.insertId);
+
+    for (const r of crew_requirements) {
+      if (!r.role_required || !r.number_required || Number(r.number_required) <= 0) {
+        return errorResponse('Invalid crew_requirements item', 400);
+      }
+
+      await query(
+        `INSERT INTO Crew_requirements (flight_schedule_id, role_required, number_required)
+         VALUES (?, ?, ?)`,
+        [flight_schedule_id, r.role_required, Number(r.number_required)]
+      );
+    }
+
+    await createTasksForSchedule(flight_schedule_id);
+
+    const crewRes: any = await autoAssignStaffForSchedule(flight_schedule_id);
+    const newStatus = statusFromCrewValidation(crewRes);
+
+    await query(
+      `UPDATE Flight_schedules SET flight_status = ? WHERE flight_schedule_id = ?`,
+      [newStatus, flight_schedule_id]
+    );
+
+    // Fetch created schedule
     const newSchedule = await queryOne(
       `SELECT 
         fs.*,
@@ -208,10 +227,16 @@ export async function POST(request: NextRequest) {
       LEFT JOIN Airport dest ON f.destination_airport_id = dest.airport_id
       LEFT JOIN Gates g ON fs.gate_id = g.gate_id
       WHERE fs.flight_schedule_id = ?`,
-      [result.insertId]
+      [flight_schedule_id]
     );
 
-    return createdResponse(newSchedule, 'Flight schedule created successfully');
+    return createdResponse(
+      {
+        ...newSchedule,
+        crew_validation: crewRes,
+      },
+      'Flight schedule created successfully'
+    );
   } catch (error: any) {
     console.error('Create flight schedule error:', error);
     return errorResponse('Failed to create flight schedule: ' + error.message, 500);
