@@ -228,12 +228,32 @@ export async function createTasksForSchedule(flight_schedule_id: number) {
 
   const requirements = await getRequirementsForSchedule(flight_schedule_id);
   if (requirements.length === 0) throw new Error('No crew requirements found');
-
-  const existing = await queryOne<any>(
-    `SELECT COUNT(*) as count FROM Tasks WHERE flight_schedule_id = ?`,
+  
+  const counts = await queryOne<any>(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN task_status IN ('Pending','Assigned','In Progress') THEN 1 ELSE 0 END) AS open_count
+     FROM Tasks
+     WHERE flight_schedule_id = ?`,
     [flight_schedule_id]
   );
-  if (Number(existing?.count || 0) > 0) return;
+
+  const total = Number(counts?.total || 0);
+  const openCount = Number(counts?.open_count || 0);
+
+  if (total > 0 && openCount > 0) return;
+
+  if (total > 0 && openCount === 0) {
+    await query(
+      `DELETE ta
+       FROM Task_Assignments ta
+       JOIN Tasks t ON t.task_id = ta.task_id
+       WHERE t.flight_schedule_id = ?`,
+      [flight_schedule_id]
+    );
+
+    await query(`DELETE FROM Tasks WHERE flight_schedule_id = ?`, [flight_schedule_id]);
+  }
 
   for (const req of requirements) {
     const task_type = taskTypeForRole(req.role_required);
