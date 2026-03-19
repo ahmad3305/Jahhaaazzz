@@ -1,6 +1,6 @@
 export const runtime = 'nodejs';
 
-import { query, queryOne, withTransaction } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import { successResponse, errorResponse, createdResponse, validationErrorResponse } from '@/lib/response';
 import { ticketCreateSchema, validateData } from '@/lib/validations';
 import { requireAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
@@ -11,7 +11,7 @@ async function getHandler(req: AuthenticatedRequest) {
     const { searchParams } = new URL(req.url);
     const passenger_id = searchParams.get('passenger_id');
     const flight_schedule_id = searchParams.get('flight_schedule_id');
-    const status = searchParams.get('status'); // FIX: was booking_status
+    const status = searchParams.get('status');
 
     let sql = `
       SELECT 
@@ -43,7 +43,6 @@ async function getHandler(req: AuthenticatedRequest) {
       sql += ' AND t.passenger_id = ?';
       params.push(user.passenger_id);
     } else {
-      
       if (passenger_id) {
         sql += ' AND t.passenger_id = ?';
         params.push(parseInt(passenger_id, 10));
@@ -94,7 +93,6 @@ async function postHandler(req: AuthenticatedRequest) {
     }
 
     const result = await withTransaction(async (conn) => {
-    
       const [scheduleRows] = await conn.execute(
         `SELECT flight_schedule_id, flight_status, aircraft_id
          FROM Flight_schedules
@@ -109,7 +107,11 @@ async function postHandler(req: AuthenticatedRequest) {
       }
 
       if (schedule.flight_status === 'Cancelled' || schedule.flight_status === 'Completed') {
-        return { kind: 'error' as const, status: 400, message: `Cannot book tickets for ${schedule.flight_status.toLowerCase()} flight` };
+        return {
+          kind: 'error' as const,
+          status: 400,
+          message: `Cannot book tickets for ${schedule.flight_status.toLowerCase()} flight`,
+        };
       }
 
       const [aircraftRows] = await conn.execute(
@@ -125,9 +127,11 @@ async function postHandler(req: AuthenticatedRequest) {
       }
 
       const capacity =
-        data.seat_class === 'Economy' ? aircraft.economy_seats :
-        data.seat_class === 'Business' ? aircraft.business_seats :
-        aircraft.first_class_seats;
+        data.seat_class === 'Economy'
+          ? aircraft.economy_seats
+          : data.seat_class === 'Business'
+            ? aircraft.business_seats
+            : aircraft.first_class_seats;
 
       const [countRows] = await conn.execute(
         `SELECT COUNT(*) as booked
@@ -142,6 +146,7 @@ async function postHandler(req: AuthenticatedRequest) {
       if (booked >= capacity) {
         return { kind: 'error' as const, status: 400, message: `No ${data.seat_class} seats available` };
       }
+
       const [seatRows] = await conn.execute(
         `SELECT ticket_id
          FROM Tickets
@@ -165,17 +170,17 @@ async function postHandler(req: AuthenticatedRequest) {
           ticket_price,
           booking_date,
           status
-        ) VALUES (?, ?, ?, ?, ?, NOW(), 'Confirmed')`,
-        [
-          data.passenger_id,
-          data.flight_schedule_id,
-          data.seat_number,
-          data.seat_class,
-          data.ticket_price
-        ]
+        ) VALUES (?, ?, ?, ?, ?, NOW(), 'Pending')`,
+        [data.passenger_id, data.flight_schedule_id, data.seat_number, data.seat_class, data.ticket_price]
       );
 
       const ticketId = (insertResult as any).insertId;
+
+      await conn.execute(
+        `INSERT INTO Payments (ticket_id, amount, payment_method, payment_status, payment_date)
+         VALUES (?, ?, NULL, 'Pending', NULL)`,
+        [ticketId, data.ticket_price]
+      );
 
       const [ticketRows] = await conn.execute(
         `SELECT t.*, p.first_name, p.last_name, f.flight_number
@@ -194,9 +199,8 @@ async function postHandler(req: AuthenticatedRequest) {
       return errorResponse(result.message, result.status);
     }
 
-    return createdResponse(result.ticket, 'Ticket booked successfully');
+    return createdResponse(result.ticket, 'Ticket booked successfully (Pending payment)');
   } catch (error: any) {
-   
     if (error?.code === 'ER_DUP_ENTRY') {
       return errorResponse('Seat already booked', 409);
     }
