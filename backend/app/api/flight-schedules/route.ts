@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       [
         newStatus,
         newStatus === 'Delayed' ? 'Crew Issue' : null,
-        flight_schedule_id
+        flight_schedule_id,
       ]
     );
 
