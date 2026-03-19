@@ -328,7 +328,10 @@ export async function autoAssignStaffForSchedule(flight_schedule_id: number) {
   return res;
 }
 
-export async function releaseStaffForSchedule(flight_schedule_id: number) {
+export async function releaseStaffForSchedule(
+  flight_schedule_id: number,
+  mode: 'ground' | 'flight' | 'all' = 'all'
+) {
   const schedule = await queryOne<any>(
     `SELECT DATE(departure_datetime) as dep_date
      FROM Flight_schedules
@@ -337,13 +340,32 @@ export async function releaseStaffForSchedule(flight_schedule_id: number) {
   );
   const depDate = schedule?.dep_date;
 
+  const FLIGHT_ROLES: CrewRole[] = ['Pilot', 'Co-Pilot', 'Cabin Crew'];
+  const GROUND_ROLES: CrewRole[] = [
+    'Check-in Staff',
+    'Boarding Staff',
+    'Baggage Handler',
+    'Ramp Operator',
+    'Maintenance Crew',
+    'Supervisor',
+  ];
+
+  const roles =
+    mode === 'flight'
+      ? FLIGHT_ROLES
+      : mode === 'ground'
+        ? GROUND_ROLES
+        : [...FLIGHT_ROLES, ...GROUND_ROLES];
+
   const assigned = await query<any[]>(
     `SELECT DISTINCT ta.staff_id
      FROM Task_Assignments ta
      JOIN Tasks t ON t.task_id = ta.task_id
+     JOIN Staff s ON s.staff_id = ta.staff_id
      WHERE t.flight_schedule_id = ?
-       AND ta.assignment_status = 'Assigned'`,
-    [flight_schedule_id]
+       AND ta.assignment_status = 'Assigned'
+       AND s.role IN (${roles.map(() => '?').join(',')})`,
+    [flight_schedule_id, ...roles]
   );
 
   const staffIds = assigned.map((r) => Number(r.staff_id));
@@ -369,18 +391,21 @@ export async function releaseStaffForSchedule(flight_schedule_id: number) {
   await query(
     `UPDATE Task_Assignments ta
      JOIN Tasks t ON t.task_id = ta.task_id
+     JOIN Staff s ON s.staff_id = ta.staff_id
      SET ta.assignment_status = 'Completed', ta.end_time = NOW()
      WHERE t.flight_schedule_id = ?
-       AND ta.assignment_status = 'Assigned'`,
-    [flight_schedule_id]
+       AND ta.assignment_status = 'Assigned'
+       AND s.role IN (${roles.map(() => '?').join(',')})`,
+    [flight_schedule_id, ...roles]
   );
 
   await query(
     `UPDATE Tasks
      SET task_status = 'Completed'
      WHERE flight_schedule_id = ?
+       AND required_role IN (${roles.map(() => '?').join(',')})
        AND task_status IN ('Pending','Assigned','In Progress')`,
-    [flight_schedule_id]
+    [flight_schedule_id, ...roles]
   );
 }
 
