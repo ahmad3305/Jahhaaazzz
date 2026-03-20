@@ -5,7 +5,7 @@ import { queryOne } from '@/lib/db';
 import { comparePassword, generateToken } from '@/lib/auth';
 import { successResponse, errorResponse } from '@/lib/response';
 
-const allowedOrigin = 'http://localhost:3001'; // Make sure this matches your frontend port
+const allowedOrigin = 'http://localhost:3001';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
