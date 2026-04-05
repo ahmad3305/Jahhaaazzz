@@ -2,24 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE } from "@/app/config";
-
-type Flight = {
-  flight_id: number;
-  airline_name: string;
-  airline_code: string;
-  flight_number: number;
-  flight_type: string;
-  estimated_duration: string;
-  source_airport_name: string;
-  source_airport_code: string;
-  source_city: string;
-  source_country: string;
-  destination_airport_name: string;
-  destination_airport_code: string;
-  destination_city: string;
-  destination_country: string;
-};
+import { getAllFlights, Flight } from "@/app/services/flight.service";
 
 export default function FlightsAdminPage() {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -28,23 +11,19 @@ export default function FlightsAdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    async function fetchFlights() {
+    async function loadFlights() {
       setLoading(true);
       try {
         const token = localStorage.getItem("token") || "";
-        const res = await fetch(`${API_BASE}/flights`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (!res.ok || json.success === false) throw new Error(json.message || "Failed to fetch flights");
-        setFlights(Array.isArray(json.data) ? json.data : []);
+        const data = await getAllFlights(token);
+        setFlights(data);
       } catch (e: any) {
         setError(e?.message || "Failed to load flights.");
       } finally {
         setLoading(false);
       }
     }
-    fetchFlights();
+    loadFlights();
   }, []);
 
   return (
@@ -56,7 +35,6 @@ export default function FlightsAdminPage() {
             + Create Flight
           </button>
         </div>
-
         {loading ? (
           <div style={styles.loading}>Loading flights...</div>
         ) : error ? (
