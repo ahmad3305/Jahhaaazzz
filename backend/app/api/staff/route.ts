@@ -6,6 +6,12 @@ import { successResponse, errorResponse, createdResponse, validationErrorRespons
 import { staffCreateSchema, validateData } from '@/lib/validations';
 import { requireStaff, requireAdmin, AuthenticatedRequest } from '@/lib/auth-middleware';
 
+import { handleOptions } from '@/lib/cors';
+
+export function OPTIONS() {
+  return handleOptions();
+}
+
 async function getHandler(req: AuthenticatedRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -69,7 +75,7 @@ async function postHandler(req: AuthenticatedRequest) {
     }
 
     const data = validation.data!;
-    
+
     const airport = await queryOne(
       'SELECT airport_id FROM Airport WHERE airport_id = ?',
       [data.airport_id]
