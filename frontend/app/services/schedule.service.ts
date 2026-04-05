@@ -1,71 +1,83 @@
 
 import { API_BASE } from "@/app/config";
 
+export type CrewRequirement = { role_required: string; number_required: number; };
 export type FlightSchedule = {
   flight_schedule_id: number;
+  flight_id: number;
   flight_number: number;
-  flight_type: string;
   airline_name: string;
   airline_code: string;
-  estimated_duration: string;
-  departure_datetime: string;
-  arrival_datetime: string;
+  flight_type: string;
+  aircraft_id: number;
   registration_number: string;
-  model_name: string;
-  manufacturer: string;
-  source_airport_name: string;
-  source_airport_code: string;
-  source_city: string;
-  destination_airport_name: string;
-  destination_airport_code: string;
-  destination_city: string;
+  gate_id: number;
   gate_number: string;
   terminal_name: string;
+  departure_datetime: string;
+  arrival_datetime: string;
+  source_airport_name: string;
+  destination_airport_name: string;
   flight_status: string;
   delay_reason?: string | null;
+  crew_requirements?: CrewRequirement[];
 };
 
-export async function getSchedulesByStatus(
-  status: string,
+export type Aircraft = { aircraft_id: number; registration_number: string; status: string };
+export type Gate = { gate_id: number; gate_number: string; terminal_name: string };
+
+export async function getScheduleById(
+  scheduleId: string | number,
   token?: string
-): Promise<FlightSchedule[]> {
-  const res = await fetch(`${API_BASE}/flight_schedule?flight_status=${encodeURIComponent(status)}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    }
+): Promise<FlightSchedule> {
+  const res = await fetch(`${API_BASE}/flight_schedule/${scheduleId}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
-  let json: any;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error("Non-JSON response from /flight_schedule endpoint");
-  }
-  if (!res.ok || json.success === false) {
-    throw new Error(json.message || "Failed to fetch flight schedules");
-  }
+  const json = await res.json();
+  if (!res.ok || !json.success)
+    throw new Error(json.message || "Failed to load schedule");
+  return json.data as FlightSchedule;
+}
+
+export async function getAircrafts(token?: string): Promise<Aircraft[]> {
+  const res = await fetch(`${API_BASE}/aircraft`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || "Failed to load aircrafts");
+  // filter to only "Active"
+  return (Array.isArray(json.data) ? json.data : []).filter((a: Aircraft) => a.status === "Active");
+}
+
+export async function getGates(token?: string): Promise<Gate[]> {
+  const res = await fetch(`${API_BASE}/gates`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || "Failed to load gates");
   return Array.isArray(json.data) ? json.data : [];
 }
 
-export async function delaySchedule(
-  flight_schedule_id: number,
-  delay_reason: string,
+export async function updateSchedule(
+  scheduleId: string | number,
+  body: {
+    aircraft_id: number;
+    gate_id: number;
+    departure_datetime: string;
+    arrival_datetime: string;
+    crew_requirements: CrewRequirement[];
+  },
   token?: string
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/flight_schedule/${flight_schedule_id}`, {
-    method: "PATCH",
+  const res = await fetch(`${API_BASE}/flight_schedule/${scheduleId}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ delay_reason })
+    body: JSON.stringify(body),
   });
-  let json: any;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error("Non-JSON response");
-  }
-  if (!res.ok || json.success === false) {
-    throw new Error(json.message || "Failed to delay schedule");
-  }
+  const json = await res.json();
+  if (!res.ok || !json.success)
+    throw new Error(json.message || "Failed to update schedule.");
 }
