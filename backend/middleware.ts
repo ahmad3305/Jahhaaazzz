@@ -1,14 +1,32 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+const allowedOrigin = 'http://localhost:3001';
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/api/auth/')) {
-    return NextResponse.next();
+  if (request.method === 'OPTIONS' && pathname.startsWith('/api')) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
   }
 
-  // Skip non-API routes
+  if (pathname.startsWith('/api/auth/')) {
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.headers.set('Access-Control-Max-Age', '86400');
+    return response;
+  }
+
   if (!pathname.startsWith('/api')) {
     return NextResponse.next();
   }
@@ -24,24 +42,42 @@ export function middleware(request: NextRequest) {
     '/api/runways',
   ];
 
+  const isPublicGet =
+    publicGetRoutes.some(route => pathname.startsWith(route)) &&
+    request.method === 'GET';
 
-  const isPublicGet = publicGetRoutes.some(route => pathname.startsWith(route)) 
-                      && request.method === 'GET';
-  
   if (isPublicGet) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.headers.set('Access-Control-Max-Age', '86400');
+    return response;
   }
 
   const authHeader = request.headers.get('authorization');
-  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { success: false, message: 'Authentication required' },
-      { status: 401 }
+    return new NextResponse(
+      JSON.stringify({ success: false, message: 'Authentication required' }),
+      {
+        status: 401,
+        headers: {
+          'Access-Control-Allow-Origin': allowedOrigin,
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400',
+          'Content-Type': 'application/json',
+        },
+      }
     );
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+  response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  return response;
 }
 
 export const config = {
