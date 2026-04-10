@@ -1,8 +1,9 @@
+export const runtime = 'nodejs';
+
 import { NextRequest } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { successResponse, errorResponse, createdResponse, validationErrorResponse } from '@/lib/response';
 import { crewRequirementCreateSchema, validateData } from '@/lib/validations';
-
 import { handleOptions } from '@/lib/cors';
 
 export function OPTIONS() {
@@ -22,19 +23,22 @@ export async function GET(request: NextRequest) {
         fs.arrival_datetime,
         fs.flight_status,
         f.flight_number,
+        f.flight_type,
         al.airline_name,
         al.airline_code,
         src.airport_name as source_airport_name,
         src.airport_code as source_airport_code,
+        src.city as source_city,
         dest.airport_name as destination_airport_name,
         dest.airport_code as destination_airport_code,
+        dest.city as destination_city,
         (SELECT COUNT(DISTINCT ta.staff_id) 
          FROM Task_Assignments ta
          JOIN Tasks t ON ta.task_id = t.task_id
          JOIN Staff s ON ta.staff_id = s.staff_id
          WHERE t.flight_schedule_id = cr.flight_schedule_id 
-         AND s.role = cr.role_required
-         AND ta.assignment_status != 'Cancelled') as assigned_count
+           AND s.role = cr.role_required
+           AND ta.assignment_status != 'Cancelled') as assigned_count
       FROM Crew_requirements cr
       LEFT JOIN Flight_schedules fs ON cr.flight_schedule_id = fs.flight_schedule_id
       LEFT JOIN Flights f ON fs.flight_id = f.flight_id
@@ -77,19 +81,15 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data!;
 
-    const schedule = await queryOne<any>(
+    const schedule = await queryOne(
       'SELECT * FROM Flight_schedules WHERE flight_schedule_id = ?',
       [data.flight_schedule_id]
     );
-
-    if (!schedule) {
-      return errorResponse('Flight schedule not found', 404);
-    }
+    if (!schedule) return errorResponse('Flight schedule not found', 404);
 
     if (schedule.flight_status === 'Cancelled') {
       return errorResponse('Cannot add crew requirements to cancelled flight', 400);
     }
-
     if (schedule.flight_status === 'Completed') {
       return errorResponse('Cannot add crew requirements to completed flight', 400);
     }
@@ -98,11 +98,9 @@ export async function POST(request: NextRequest) {
       'SELECT requirement_id FROM Crew_requirements WHERE flight_schedule_id = ? AND role_required = ?',
       [data.flight_schedule_id, data.role_required]
     );
-
     if (existingRequirement) {
       return errorResponse('Crew requirement for this role already exists for this flight', 409);
     }
-
     if (data.number_required <= 0) {
       return errorResponse('Number required must be greater than 0', 400);
     }
@@ -123,10 +121,24 @@ export async function POST(request: NextRequest) {
         cr.*,
         fs.departure_datetime,
         fs.arrival_datetime,
+        fs.flight_status,
         f.flight_number,
+        f.flight_type,
         al.airline_name,
+        al.airline_code,
         src.airport_name as source_airport_name,
-        dest.airport_name as destination_airport_name
+        src.airport_code as source_airport_code,
+        src.city as source_city,
+        dest.airport_name as destination_airport_name,
+        dest.airport_code as destination_airport_code,
+        dest.city as destination_city,
+        (SELECT COUNT(DISTINCT ta.staff_id) 
+         FROM Task_Assignments ta
+         JOIN Tasks t ON ta.task_id = t.task_id
+         JOIN Staff s ON ta.staff_id = s.staff_id
+         WHERE t.flight_schedule_id = cr.flight_schedule_id 
+           AND s.role = cr.role_required
+           AND ta.assignment_status != 'Cancelled') as assigned_count
       FROM Crew_requirements cr
       LEFT JOIN Flight_schedules fs ON cr.flight_schedule_id = fs.flight_schedule_id
       LEFT JOIN Flights f ON fs.flight_id = f.flight_id
