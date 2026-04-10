@@ -3,6 +3,11 @@ export const runtime = 'nodejs';
 import { NextRequest } from 'next/server';
 import { query } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/response';
+import { handleOptions } from '@/lib/cors';
+
+export function OPTIONS() {
+  return handleOptions();
+}
 
 function requireCronSecret(request: NextRequest) {
   const secret = request.headers.get('x-cron-secret');
