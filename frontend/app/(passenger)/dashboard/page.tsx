@@ -61,7 +61,7 @@ export default function PassengerDashboard() {
               Manage your bookings, check tickets, and get ready to fly 🌏
             </p>
           </div>
-          <button style={styles.cta} onClick={() => router.push("/flight_booking")}>
+          <button style={styles.cta} onClick={() => router.push("/flights/search")}>
             Book a Flight
           </button>
         </header>
@@ -141,77 +141,79 @@ export default function PassengerDashboard() {
             </AestheticCard>
           ) : (
             <AestheticCard noPad>
-            <div style={{ overflowX: "auto" }}>
-              <table style={styles.tableLargeExpanded}>
-                <thead>
-                  <tr>
-                    <th>Airline</th>
-                    <th>Flight No.</th>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Scheduled Date</th>
-                    <th>Duration</th>
-                    <th>Flight Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {flights.map((flight, idx) => (
-                    <tr key={flight.flight_id || idx}>
-                      <td style={{ fontWeight: 600 }}>
-                        {flight.airline_name || "—"}{" "}
-                        <span style={{
-                          color: "#60a5fa",
-                          fontWeight: 500,
-                          fontSize: 13,
-                          marginLeft: 5
-                        }}>
-                          ({flight.airline_code || "—"})
-                        </span>
-                      </td>
-                      <td>{flight.flight_number ?? "—"}</td>
-                      <td>
-                        <span>{flight.source_airport_name || "—"}</span>
-                        <div style={{ fontSize: 12, color: "#60a5fa" }}>
-                          {flight.source_city}, {flight.source_country}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>
-                          {flight.source_airport_code}
-                        </div>
-                      </td>
-                      <td>
-                        <span>{flight.destination_airport_name || "—"}</span>
-                        <div style={{ fontSize: 12, color: "#60a5fa" }}>
-                          {flight.destination_city}, {flight.destination_country}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>
-                          {flight.destination_airport_code}
-                        </div>
-                      </td>
-                      <td>
-                        {(flight.scheduled_date
-                          ? new Date(flight.scheduled_date)
-                          : new Date(flight.created_at)
-                        ).toLocaleString()}
-                      </td>
-                      <td>{flight.estimated_duration ?? "—"}</td>
-                      <td>
-                        <span style={{
-                          background: "#2563eb28",
-                          color: "#2563eb",
-                          borderRadius: 8,
-                          padding: "2px 11px",
-                          fontSize: 13.3,
-                          fontWeight: 600,
-                        }}>
-                          {flight.flight_type ?? "—"}
-                        </span>
-                      </td>
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.tableLarge}>
+                  <thead>
+                    <tr>
+                      <th>Airline</th>
+                      <th>Flight No.</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Duration</th>
+                      <th>Flight Type</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </AestheticCard>
+                  </thead>
+                  <tbody>
+                    {flights.map((flight, idx) => (
+                      <tr key={flight.flight_id || idx}>
+                        <td style={{ fontWeight: 600 }}>
+                          {flight.airline_name || "—"}{" "}
+                          <span style={{
+                            color: "#60a5fa",
+                            fontWeight: 500,
+                            fontSize: 13,
+                            marginLeft: 5
+                          }}>
+                            ({flight.airline_code || "—"})
+                          </span>
+                        </td>
+                        <td>{flight.flight_number ?? "—"}</td>
+                        <td>
+                          <span>{flight.source_airport_name || "—"}</span>
+                          <div style={{ fontSize: 12, color: "#60a5fa" }}>
+                            {flight.source_city}, {flight.source_country}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {flight.source_airport_code}
+                          </div>
+                        </td>
+                        <td>
+                          <span>{flight.destination_airport_name || "—"}</span>
+                          <div style={{ fontSize: 12, color: "#60a5fa" }}>
+                            {flight.destination_city}, {flight.destination_country}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {flight.destination_airport_code}
+                          </div>
+                        </td>
+                        <td>{flight.estimated_duration ?? "—"}</td>
+                        <td>
+                          <span style={{
+                            background: "#2563eb28",
+                            color: "#2563eb",
+                            borderRadius: 8,
+                            padding: "2px 11px",
+                            fontSize: 13.3,
+                            fontWeight: 600,
+                          }}>
+                            {flight.flight_type ?? "—"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            style={styles.smallBtn}
+                            onClick={() => router.push(`/flights/${flight.flight_id}`)}
+                          >
+                            Book
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </AestheticCard>
           )}
           <div style={{ marginTop: 18, textAlign: "center" }}>
             <button style={styles.cta} onClick={() => router.push("/flights/search")}>
@@ -224,7 +226,7 @@ export default function PassengerDashboard() {
   );
 }
 
-// --- COMPONENTS ---
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2
@@ -243,7 +245,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Accepts children & merges extra styles
+
 function AestheticCard({
   children,
   style,
@@ -301,34 +303,6 @@ function badgeForStatus(status: string) {
 }
 
 
-<style>
-  {`
-    table th, table td {
-      padding: 18px 20px !important;
-      text-align: left;
-      vertical-align: middle;
-    }
-    table th {
-      border-bottom: 2px solid #2563eb33;
-      font-size: 16.3px;
-      font-weight: 700;
-      letter-spacing: 0.6px;
-      color: #60a5fa;
-      background: #1e293b44;
-    }
-    table tr {
-      background: #23304a77;
-      border-radius: 13px;
-      margin-bottom: 7px;
-      box-shadow: 0 2px 8px #2563eb18;
-    }
-    table tr:not(:last-child) {
-      border-bottom: 1px solid #2563eb22;
-    }
-  `}
-</style>
-
-// --- STYLES ---
 const styles: Record<string, React.CSSProperties> = {
   bg: {
     minHeight: "100vh",
@@ -464,17 +438,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15.7,
     boxShadow: "0 2px 8px #2563eb33",
   },
-  tableLargeExpanded: {
-  width: "100%",
-  background: "none",
-  borderRadius: 16,
-  borderCollapse: "separate",
-  borderSpacing: "0 0.4rem",
-  fontSize: 17,
-  color: "#dde7fa",
-  marginBottom: 0,
-  marginTop: 0,
-  minWidth: 1100,
-},
+  tableLarge: {             
+    width: "100%",
+    background: "none",
+    borderRadius: 10,
+    borderCollapse: "collapse",
+    fontSize: 15.8,
+    boxShadow: "none",
+    color: "#dde7fa",
+    marginBottom: 0,
+    marginTop: 0,
+    minWidth: 950,
+  }
 };
-
