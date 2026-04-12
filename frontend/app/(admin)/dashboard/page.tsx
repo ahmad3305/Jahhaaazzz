@@ -1,14 +1,27 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { API_BASE } from "@/app/config";
+
+const ADMIN_LINKS: { label: string; url: string; icon: string }[] = [
+  { label: "Dashboard", icon: "🏠", url: "/(admin)/dashboard" },
+  { label: "Analytics", icon: "📊", url: "/(admin)/analytics" },
+  { label: "Flights", icon: "🛩️", url: "/(admin)/flights" },
+  { label: "Schedules", icon: "📅", url: "/(admin)/schedules" },
+  { label: "Airports", icon: "🛬", url: "/(admin)/airports" },
+  { label: "Aircraft", icon: "✈️", url: "/(admin)/aircraft" },
+  { label: "Staff", icon: "👔", url: "/(admin)/staff" },
+  { label: "Crew", icon: "👨‍✈️", url: "/(admin)/crew" },
+  { label: "Cargo", icon: "📦", url: "/(admin)/cargo" },
+  { label: "Payments", icon: "💳", url: "/(admin)/payments" },
+];
 
 type Metrics = {
   totalFlights: number;
   totalSchedules: number;
   totalAircraft: number;
-  totalCrew: number;
+  totalStaff: number;
   totalAirports: number;
   upcomingFlights: number;
   cancelledFlights: number;
@@ -16,11 +29,12 @@ type Metrics = {
   completedFlights: number;
 };
 
-export default function AdminDashboard() {
+export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     async function fetchMetrics() {
@@ -32,21 +46,21 @@ export default function AdminDashboard() {
           flightsRes,
           schedulesRes,
           aircraftRes,
-          crewRes,
+          staffRes,
           airportsRes,
         ] = await Promise.all([
           fetch(`${API_BASE}/flights`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/flight_schedule`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/aircraft`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/crew`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/staff`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/airports`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
-        const [flights, schedules, aircraft, crew, airports] = await Promise.all([
+        const [flights, schedules, aircraft, staff, airports] = await Promise.all([
           flightsRes.json(),
           schedulesRes.json(),
           aircraftRes.json(),
-          crewRes.json(),
+          staffRes.json(),
           airportsRes.json(),
         ]);
 
@@ -69,7 +83,7 @@ export default function AdminDashboard() {
           totalFlights: Array.isArray(flights.data) ? flights.data.length : 0,
           totalSchedules: scheduleRows.length,
           totalAircraft: Array.isArray(aircraft.data) ? aircraft.data.length : 0,
-          totalCrew: Array.isArray(crew.data) ? crew.data.length : 0,
+          totalStaff: Array.isArray(staff.data) ? staff.data.length : 0,
           totalAirports: Array.isArray(airports.data) ? airports.data.length : 0,
           upcomingFlights,
           cancelledFlights,
@@ -86,8 +100,33 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div style={styles.bg}>
-      <div style={styles.shell}>
+    <div style={styles.adminShell}>
+      <aside style={styles.sidebar}>
+        <div style={styles.sidebarHeader}>✈️ Admin Panel</div>
+        <nav>
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {ADMIN_LINKS.map(link => {
+              const active = pathname === link.url;
+              return (
+                <li key={link.url}>
+                  <button
+                    aria-label={link.label}
+                    style={{
+                      ...styles.sidebarLink,
+                      ...(active ? styles.sidebarLinkActive : {}),
+                    }}
+                    onClick={() => router.push(link.url)}
+                  >
+                    <span style={{ marginRight: 11 }}>{link.icon}</span>
+                    {link.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </aside>
+      <main style={styles.mainContent}>
         <h1 style={styles.title}>🛫 Admin Dashboard</h1>
         <p style={styles.subtitle}>
           Monitor your airport’s live data, operations, and resources at a glance.
@@ -149,11 +188,11 @@ export default function AdminDashboard() {
               icon="✈️"
             />
             <StatCard
-              label="Total Crew"
-              value={metrics.totalCrew}
+              label="Total Staff"
+              value={metrics.totalStaff}
               accent="#c084fc"
-              onClick={() => router.push("/(admin)/crew")}
-              icon="👨‍✈️"
+              onClick={() => router.push("/(admin)/staff")}
+              icon="👔"
             />
             <StatCard
               label="Airports"
@@ -164,7 +203,7 @@ export default function AdminDashboard() {
             />
           </div>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }
@@ -204,20 +243,65 @@ function StatCard({
   );
 }
 
+// ---- Inline Styles ----
 const styles: Record<string, React.CSSProperties> = {
-  bg: {
+  adminShell: {
+    display: "flex",
     minHeight: "100vh",
-    width: "100vw",
-    background: "linear-gradient(140deg, #1e293b 70%, #2563eb 130%)",
-    color: "#e6eefb",
     fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-    padding: 0,
+    background: "linear-gradient(140deg, #1e293b 70%, #2563eb 130%)",
   },
-  shell: {
-    maxWidth: 1200,
-    margin: "0 auto",
-    padding: "40px 18px 55px 18px",
+  sidebar: {
+    width: 230,
+    background: "#1e293b",
+    borderRight: "2px solid #2563eb22",
     minHeight: "100vh",
+    paddingTop: 0,
+    position: "sticky",
+    left: 0, top: 0, alignSelf: "flex-start",
+    zIndex: 2,
+    display: "flex",
+    flexDirection: "column"
+  },
+  sidebarHeader: {
+    color: "#60a5fa",
+    fontWeight: 900,
+    fontSize: 26,
+    textAlign: "center",
+    padding: "22px 0 30px 0",
+    borderBottom: "2px solid #2563eb22",
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    background: "none",
+  },
+  sidebarLink: {
+    width: "100%",
+    background: "none",
+    border: "none",
+    outline: "none",
+    color: "#cbd5e1",
+    fontWeight: 700,
+    padding: "13px 30px 13px 27px",
+    fontSize: 17,
+    textAlign: "left",
+    borderLeft: "5px solid transparent",
+    cursor: "pointer",
+    transition: "all 0.14s",
+    backgroundColor: "transparent",
+  },
+  sidebarLinkActive: {
+    color: "#60a5fa",
+    backgroundColor: "#12203f",
+    borderLeft: "5px solid #38bdf8",
+    fontWeight: 900
+  },
+  mainContent: {
+    flex: 1,
+    padding: "38px 40px 40px 40px",
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch"
   },
   title: {
     fontSize: 32,
