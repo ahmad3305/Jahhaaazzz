@@ -1,23 +1,22 @@
+
 import { NextRequest } from 'next/server';
 import { query, queryOne } from '@/lib/db';
-import {
-  successResponse,
-  errorResponse,
-  notFoundResponse,
-  noContentResponse,
-  validationErrorResponse,
-} from '@/lib/response';
+import { successResponse, errorResponse, notFoundResponse, noContentResponse, validationErrorResponse } from '@/lib/response';
 import { flightScheduleUpdateSchema, validateData } from '@/lib/validations';
-import { releaseStaffForSchedule } from '@/utils/crew-validator';
+
 import { handleOptions } from '@/lib/cors';
 
 export function OPTIONS() {
   return handleOptions();
 }
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const scheduleId = parseInt(params.id);
+
     if (isNaN(scheduleId)) {
       return errorResponse('Invalid flight schedule ID', 400);
     }
@@ -76,9 +75,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const scheduleId = parseInt(params.id);
+
     if (isNaN(scheduleId)) {
       return errorResponse('Invalid flight schedule ID', 400);
     }
@@ -92,25 +95,29 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return notFoundResponse('Flight schedule not found');
     }
 
-    if (existing.flight_status === 'Completed') {
-      return errorResponse('Cannot update completed flight schedule', 400);
-    }
-
     const body = await request.json();
-    const validation = validateData(flightScheduleUpdateSchema, body);
 
+    const validation = validateData(flightScheduleUpdateSchema, body);
     if (!validation.success) {
       return validationErrorResponse(validation.errors);
     }
 
     const updateData = validation.data!;
 
+    if (existing.flight_status === 'Completed') {
+      return errorResponse('Cannot update completed flight schedule', 400);
+    }
+
     if (updateData.aircraft_id) {
       const aircraft = await queryOne<any>(
         'SELECT * FROM Aircraft WHERE aircraft_id = ?',
         [updateData.aircraft_id]
       );
-      if (!aircraft) return errorResponse('Aircraft not found', 404);
+
+      if (!aircraft) {
+        return errorResponse('Aircraft not found', 404);
+      }
+
       if (aircraft.status !== 'Active') {
         return errorResponse('Aircraft is not active', 400);
       }
@@ -121,7 +128,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         'SELECT * FROM Gates WHERE gate_id = ?',
         [updateData.gate_id]
       );
-      if (!gate) return errorResponse('Gate not found', 404);
+
+      if (!gate) {
+        return errorResponse('Gate not found', 404);
+      }
     }
 
     const newDeparture = updateData.departure_datetime || existing.departure_datetime;
@@ -136,39 +146,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return errorResponse('Arrival time must be after departure time', 400);
     }
 
-    const aircraftConflict = await queryOne(
-      `SELECT flight_schedule_id FROM Flight_schedules 
-       WHERE aircraft_id = ? 
-       AND flight_schedule_id != ?
-       AND flight_status NOT IN ('Cancelled', 'Completed')
-       AND (
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime >= ? AND arrival_datetime <= ?)
-       )`,
-      [newAircraftId, scheduleId, newDeparture, newDeparture, newArrival, newArrival, newDeparture, newArrival]
-    );
-
-    if (aircraftConflict) {
-      return errorResponse('Aircraft conflict detected', 409);
-    }
-
-    const gateConflict = await queryOne(
-      `SELECT flight_schedule_id FROM Flight_schedules 
-       WHERE gate_id = ? 
-       AND flight_schedule_id != ?
-       AND flight_status NOT IN ('Cancelled', 'Completed')
-       AND (
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime >= ? AND arrival_datetime <= ?)
-       )`,
-      [newGateId, scheduleId, newDeparture, newDeparture, newArrival, newArrival, newDeparture, newArrival]
-    );
-
-    if (gateConflict) {
-      return errorResponse('Gate conflict detected', 409);
-    }
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -205,15 +182,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       values
     );
 
-    if (updateData.flight_status === 'Cancelled') {
-      const dep = new Date(existing.departure_datetime);
-      if (dep.getTime() > Date.now()) {
-        await releaseStaffForSchedule(scheduleId, 'all');
-      }
-    }
-
     const updatedSchedule = await queryOne(
-      `SELECT * FROM Flight_schedules WHERE flight_schedule_id = ?`,
+      `SELECT 
+        fs.*,
+        f.flight_number,
+        al.airline_name,
+        ac.registration_number,
+        src.airport_name as source_airport_name,
+        dest.airport_name as destination_airport_name,
+        g.gate_number
+      FROM Flight_schedules fs
+      LEFT JOIN Flights f ON fs.flight_id = f.flight_id
+      LEFT JOIN Airline al ON f.airline_id = al.airline_id
+      LEFT JOIN Aircraft ac ON fs.aircraft_id = ac.aircraft_id
+      LEFT JOIN Airport src ON f.source_airport_id = src.airport_id
+      LEFT JOIN Airport dest ON f.destination_airport_id = dest.airport_id
+      LEFT JOIN Gates g ON fs.gate_id = g.gate_id
+      WHERE fs.flight_schedule_id = ?`,
       [scheduleId]
     );
 
@@ -224,66 +209,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const scheduleId = parseInt(params.id);
-    if (isNaN(scheduleId)) {
-      return errorResponse('Invalid flight schedule ID', 400);
-    }
 
-    const body = await request.json();
-    const { delay_reason } = body;
-
-    const allowedReasons = [
-      'Crew Issue',
-      'Weather',
-      'Technical Issue',
-      'Airport Congestion',
-      'Other',
-    ];
-
-    if (!delay_reason || !allowedReasons.includes(delay_reason)) {
-      return errorResponse('Invalid delay reason', 400);
-    }
-
-    const existing = await queryOne<any>(
-      'SELECT * FROM Flight_schedules WHERE flight_schedule_id = ?',
-      [scheduleId]
-    );
-
-    if (!existing) {
-      return notFoundResponse('Flight schedule not found');
-    }
-
-    if (existing.flight_status === 'Completed') {
-      return errorResponse('Cannot delay completed flight', 400);
-    }
-
-    await query(
-      `UPDATE Flight_schedules
-       SET flight_status = 'Delayed',
-           delay_reason = ?
-       WHERE flight_schedule_id = ?`,
-      [delay_reason, scheduleId]
-    );
-
-    if (delay_reason !== 'Crew Issue') {
-      await releaseStaffForSchedule(scheduleId, 'all');
-    }
-
-    return successResponse(
-      { flight_schedule_id: scheduleId, delay_reason },
-      'Flight marked as delayed'
-    );
-  } catch (error: any) {
-    console.error('Delay flight error:', error);
-    return errorResponse('Failed to delay flight: ' + error.message, 500);
-  }
-}
-
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const scheduleId = parseInt(params.id);
     if (isNaN(scheduleId)) {
       return errorResponse('Invalid flight schedule ID', 400);
     }
@@ -298,11 +230,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     if (existing.flight_status === 'Cancelled') {
-      return errorResponse('Already cancelled', 400);
+      return errorResponse('Flight schedule is already cancelled', 400);
     }
 
     if (existing.flight_status === 'Completed') {
-      return errorResponse('Cannot cancel completed flight', 400);
+      return errorResponse('Cannot cancel completed flight schedule', 400);
     }
 
     const ticketCount = await queryOne<any>(
@@ -311,38 +243,23 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       [scheduleId]
     );
 
-    const dep = new Date(existing.departure_datetime);
-    const isBeforeDeparture = dep.getTime() > Date.now();
-
     if (ticketCount.count > 0) {
       await query(
-        `UPDATE Flight_schedules SET flight_status = 'Cancelled' WHERE flight_schedule_id = ?`,
-        [scheduleId]
+        'UPDATE Flight_schedules SET flight_status = ? WHERE flight_schedule_id = ?',
+        ['Cancelled', scheduleId]
       );
 
       await query(
-        `UPDATE Tickets SET status = 'Cancelled' WHERE flight_schedule_id = ?`,
-        [scheduleId]
+        'UPDATE Tickets SET status = ? WHERE flight_schedule_id = ? AND status != ?',
+        ['Cancelled', scheduleId, 'Cancelled']
       );
-
-      if (isBeforeDeparture) {
-        await releaseStaffForSchedule(scheduleId, 'all');
-      }
 
       return successResponse(
-        { flight_schedule_id: scheduleId },
-        'Flight cancelled'
+        { flight_schedule_id: scheduleId, status: 'Cancelled', tickets_cancelled: ticketCount.count },
+        'Flight schedule cancelled successfully'
       );
     } else {
-      if (isBeforeDeparture) {
-        await releaseStaffForSchedule(scheduleId, 'all');
-      }
-
-      await query(
-        `DELETE FROM Flight_schedules WHERE flight_schedule_id = ?`,
-        [scheduleId]
-      );
-
+      await query('DELETE FROM Flight_schedules WHERE flight_schedule_id = ?', [scheduleId]);
       return noContentResponse();
     }
   } catch (error: any) {
