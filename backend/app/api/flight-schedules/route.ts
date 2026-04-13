@@ -1,9 +1,9 @@
+
 import { NextRequest } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { successResponse, errorResponse, createdResponse, validationErrorResponse } from '@/lib/response';
 import { flightScheduleCreateSchema, validateData } from '@/lib/validations';
-import { statusFromCrewValidation } from '@/utils/flight-status';
-import { createTasksForSchedule, autoAssignStaffForSchedule } from '@/utils/crew-validator';
+import { validateAndPlanCrewForSchedule, createTasksForSchedule, autoAssignStaffForSchedule } from '@/lib/crew-validator'; // <-- Update import path if needed
 import { handleOptions } from '@/lib/cors';
 
 export function OPTIONS() {
@@ -56,27 +56,22 @@ export async function GET(request: NextRequest) {
       sql += ' AND fs.flight_id = ?';
       params.push(parseInt(flight_id));
     }
-
     if (aircraft_id) {
       sql += ' AND fs.aircraft_id = ?';
       params.push(parseInt(aircraft_id));
     }
-
     if (flight_status) {
       sql += ' AND fs.flight_status = ?';
       params.push(flight_status);
     }
-
     if (departure_date) {
       sql += ' AND DATE(fs.departure_datetime) = ?';
       params.push(departure_date);
     }
-
     if (source_airport_id) {
       sql += ' AND f.source_airport_id = ?';
       params.push(parseInt(source_airport_id));
     }
-
     if (destination_airport_id) {
       sql += ' AND f.destination_airport_id = ?';
       params.push(parseInt(destination_airport_id));
@@ -85,7 +80,6 @@ export async function GET(request: NextRequest) {
     sql += ' ORDER BY fs.departure_datetime DESC';
 
     const schedules = await query(sql, params);
-
     return successResponse(schedules, 'Flight schedules retrieved successfully');
   } catch (error: any) {
     console.error('Get flight schedules error:', error);
@@ -104,123 +98,35 @@ export async function POST(request: NextRequest) {
 
     const data = validation.data!;
 
-    const crew_requirements = (body?.crew_requirements || []) as Array<{
-      role_required: string;
-      number_required: number;
-    }>;
-
-    if (!Array.isArray(crew_requirements) || crew_requirements.length === 0) {
-      return errorResponse('crew_requirements is required', 400);
-    }
-
     const flight = await queryOne('SELECT * FROM Flights WHERE flight_id = ?', [data.flight_id]);
-    if (!flight) {
-      return errorResponse('Flight not found', 404);
-    }
+    if (!flight) return errorResponse('Flight not found', 404);
 
     const aircraft = await queryOne<any>('SELECT * FROM Aircraft WHERE aircraft_id = ?', [data.aircraft_id]);
-    if (!aircraft) {
-      return errorResponse('Aircraft not found', 404);
-    }
-
-    if (aircraft.status !== 'Active') {
-      return errorResponse('Aircraft is not active', 400);
-    }
+    if (!aircraft) return errorResponse('Aircraft not found', 404);
+    if (aircraft.status !== 'Active') return errorResponse('Aircraft is not active', 400);
 
     const gate = await queryOne('SELECT * FROM Gates WHERE gate_id = ?', [data.gate_id]);
-    if (!gate) {
-      return errorResponse('Gate not found', 404);
-    }
+    if (!gate) return errorResponse('Gate not found', 404);
 
     const departureTime = new Date(data.departure_datetime);
     const arrivalTime = new Date(data.arrival_datetime);
-
-    if (arrivalTime <= departureTime) {
-      return errorResponse('Arrival time must be after departure time', 400);
-    }
-
-    const aircraftConflict = await queryOne(
-      `SELECT flight_schedule_id FROM Flight_schedules 
-       WHERE aircraft_id = ? 
-       AND flight_status NOT IN ('Cancelled', 'Completed')
-       AND (
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime >= ? AND arrival_datetime <= ?)
-       )`,
-      [
-        data.aircraft_id,
-        data.departure_datetime, data.departure_datetime,
-        data.arrival_datetime, data.arrival_datetime,
-        data.departure_datetime, data.arrival_datetime,
-      ]
-    );
-
-    if (aircraftConflict) {
-      return errorResponse('Aircraft is already scheduled for another flight at this time', 409);
-    }
-
-    const gateConflict = await queryOne(
-      `SELECT flight_schedule_id FROM Flight_schedules 
-       WHERE gate_id = ? 
-       AND flight_status NOT IN ('Cancelled', 'Completed')
-       AND (
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime <= ? AND arrival_datetime >= ?) OR
-         (departure_datetime >= ? AND arrival_datetime <= ?)
-       )`,
-      [
-        data.gate_id,
-        data.departure_datetime, data.departure_datetime,
-        data.arrival_datetime, data.arrival_datetime,
-        data.departure_datetime, data.arrival_datetime,
-      ]
-    );
-
-    if (gateConflict) {
-      return errorResponse('Gate is already assigned to another flight at this time', 409);
-    }
+    if (arrivalTime <= departureTime) return errorResponse('Arrival time must be after departure time', 400);
 
     const result = await query<any>(
       `INSERT INTO Flight_schedules (
         flight_id, aircraft_id, departure_datetime, 
         arrival_datetime, gate_id, flight_status
       ) VALUES (?, ?, ?, ?, ?, 'Scheduled')`,
-      [data.flight_id, data.aircraft_id, data.departure_datetime, data.arrival_datetime, data.gate_id]
-    );
-
-    const flight_schedule_id = Number(result.insertId);
-
-    for (const r of crew_requirements) {
-      if (!r.role_required || !r.number_required || Number(r.number_required) <= 0) {
-        return errorResponse('Invalid crew_requirements item', 400);
-      }
-
-      await query(
-        `INSERT INTO Crew_requirements (flight_schedule_id, role_required, number_required)
-         VALUES (?, ?, ?)`,
-        [flight_schedule_id, r.role_required, Number(r.number_required)]
-      );
-    }
-
-    await createTasksForSchedule(flight_schedule_id);
-
-    const crewRes: any = await autoAssignStaffForSchedule(flight_schedule_id);
-    const newStatus = statusFromCrewValidation(crewRes);
-
-    await query(
-      `UPDATE Flight_schedules 
-       SET flight_status = ?, 
-           delay_reason = ?
-       WHERE flight_schedule_id = ?`,
       [
-        newStatus,
-        newStatus === 'Delayed' ? 'Crew Issue' : null,
-        flight_schedule_id,
+        data.flight_id,
+        data.aircraft_id,
+        data.departure_datetime,
+        data.arrival_datetime,
+        data.gate_id
       ]
     );
 
-    const newSchedule = await queryOne(
+    let newSchedule = await queryOne(
       `SELECT 
         fs.*,
         f.flight_number,
@@ -237,15 +143,31 @@ export async function POST(request: NextRequest) {
       LEFT JOIN Airport dest ON f.destination_airport_id = dest.airport_id
       LEFT JOIN Gates g ON fs.gate_id = g.gate_id
       WHERE fs.flight_schedule_id = ?`,
-      [flight_schedule_id]
+      [result.insertId]
     );
 
+    const crewResult = await validateAndPlanCrewForSchedule(result.insertId);
+    if (crewResult.kind === 'ok') {
+      await createTasksForSchedule(result.insertId);
+      await autoAssignStaffForSchedule(result.insertId);
+    } else {
+      const delayReason = crewResult.kind === 'insufficient_crew'
+        ? 'Insufficient Crew'
+        : 'Crew assignment pending';
+      await query(
+        `UPDATE Flight_schedules SET flight_status = 'Delayed', delay_reason = ? WHERE flight_schedule_id = ?`,
+        [delayReason, result.insertId]
+      );
+      newSchedule.flight_status = 'Delayed';
+      newSchedule.delay_reason = delayReason;
+    }
+
     return createdResponse(
-      {
-        ...newSchedule,
-        crew_validation: crewRes,
-      },
-      'Flight schedule created successfully'
+      newSchedule,
+      crewResult.kind === 'ok'
+        ? 'Flight schedule created and crew assigned'
+        : `Flight schedule delayed: ${newSchedule.delay_reason}`,
+      { crewResult }
     );
   } catch (error: any) {
     console.error('Create flight schedule error:', error);
