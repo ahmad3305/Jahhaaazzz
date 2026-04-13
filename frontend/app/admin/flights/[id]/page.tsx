@@ -36,7 +36,7 @@ export default function FlightDetailPage() {
     try {
       const token = localStorage.getItem("token") || "";
       await deleteFlight(flight.flight_id, token);
-      router.push("/(admin)/flights");
+      router.push("/admin/flights");
     } catch (e: any) {
       alert(e?.message || "Failed to delete flight.");
     }
@@ -44,7 +44,7 @@ export default function FlightDetailPage() {
 
   function handleEdit() {
     if (!flight) return;
-    router.push(`/(admin)/flights/${flight.flight_id}/edit`);
+    router.push(`/admin/flights/${flight.flight_id}/edit`);
   }
 
   return (

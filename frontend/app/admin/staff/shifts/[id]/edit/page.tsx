@@ -88,7 +88,7 @@ export default function EditShiftPage() {
         if (json.errors && Array.isArray(json.errors)) setApiErrors(json.errors);
         throw new Error(json.message);
       }
-      router.push("/(admin)/staff/shifts");
+      router.push("/admin/staff/shifts");
     } catch (e: any) {
       setError(e?.message || "Failed to update shift");
     } finally {
@@ -180,7 +180,7 @@ export default function EditShiftPage() {
                 <button type="submit" style={styles.submitBtn} disabled={saving}>
                   {saving ? "Saving..." : "Save"}
                 </button>
-                <button type="button" style={styles.cancelBtn} disabled={saving} onClick={() => router.push("/(admin)/staff/shifts")}>Cancel</button>
+                <button type="button" style={styles.cancelBtn} disabled={saving} onClick={() => router.push("/admin/staff/shifts")}>Cancel</button>
               </div>
             </form>
           )}

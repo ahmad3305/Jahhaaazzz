@@ -68,10 +68,10 @@ export default function StaffPage() {
         <div style={styles.headerBar}>
           <div style={styles.title}>👔 Staff Directory</div>
           <div style={styles.headerActions}>
-            <button style={styles.addStaffBtn} onClick={() => router.push("/(admin)/staff/create")}>
+            <button style={styles.addStaffBtn} onClick={() => router.push("/admin/staff/create")}>
               + Add Staff
             </button>
-            <button style={styles.allShiftsBtn} onClick={() => router.push("/(admin)/staff/shifts")}>
+            <button style={styles.allShiftsBtn} onClick={() => router.push("/admin/staff/shifts")}>
               See All Shifts
             </button>
           </div>
@@ -116,13 +116,13 @@ export default function StaffPage() {
                         <td style={styles.td}>
                           <button
                             style={styles.actionBtn}
-                            onClick={() => router.push(`/(admin)/staff/${s.staff_id}/edit`)}
+                            onClick={() => router.push(`/admin/staff/${s.staff_id}/edit`)}
                           >
                             Edit
                           </button>
                           <button
                             style={styles.shiftsBtn}
-                            onClick={() => router.push(`/(admin)/staff/${s.staff_id}/shifts`)}
+                            onClick={() => router.push(`/admin/staff/${s.staff_id}/shifts`)}
                           >
                             See Shifts
                           </button>

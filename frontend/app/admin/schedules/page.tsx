@@ -84,7 +84,7 @@ export default function SchedulesPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <h1 style={styles.title}>✈️ Flight Schedules</h1>
-          <button style={styles.createBtn} onClick={() => router.push("/(admin)/schedules/create")}>
+          <button style={styles.createBtn} onClick={() => router.push("/admin/schedules/create")}>
             + Create Schedule
           </button>
         </div>
@@ -217,7 +217,7 @@ export default function SchedulesPage() {
                       <td>
                         <button
                           style={styles.actionBtn}
-                          onClick={() => router.push(`/(admin)/schedules/${s.flight_schedule_id}/edit`)}
+                          onClick={() => router.push(`/admin/schedules/${s.flight_schedule_id}/edit`)}
                         >
                           View/Edit
                         </button>
@@ -232,7 +232,7 @@ export default function SchedulesPage() {
                         {activeTab === "Delayed" && s.delay_reason !== "Crew Issue" && (
                           <button
                             style={styles.primaryBtn}
-                            onClick={() => router.push(`/(admin)/schedules/${s.flight_schedule_id}/edit`)}
+                            onClick={() => router.push(`/admin/schedules/${s.flight_schedule_id}/edit`)}
                           >
                             Reschedule
                           </button>

@@ -86,7 +86,7 @@ export default function StaffShiftsPage() {
                         style={styles.actionBtn}
                         onClick={() =>
                           router.push(
-                            `/(admin)/staff/shifts/${shift.shift_id}/edit`
+                            `/admin/staff/shifts/${shift.shift_id}/edit`
                           )
                         }
                       >
@@ -103,7 +103,7 @@ export default function StaffShiftsPage() {
           <button
             type="button"
             style={styles.cancelBtn}
-            onClick={() => router.push("/(admin)/staff")}
+            onClick={() => router.push("/admin/staff")}
           >
             Back to Staff List
           </button>

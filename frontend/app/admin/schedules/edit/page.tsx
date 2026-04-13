@@ -119,7 +119,7 @@ export default function ScheduleEditPage() {
         },
         token
       );
-      router.push("/(admin)/schedules");
+      router.push("/admin/schedules");
     } catch (e: any) {
       setSubmitError(e?.message || "Failed to update schedule.");
     } finally {
@@ -275,7 +275,7 @@ export default function ScheduleEditPage() {
                 <button type="submit" style={styles.submitBtn} disabled={submitting || loading}>
                   {submitting ? "Updating..." : isReschedule() ? "Update & Reschedule" : "Update"}
                 </button>
-                <button type="button" style={styles.cancelBtn} onClick={() => router.push("/(admin)/schedules")} disabled={submitting}>
+                <button type="button" style={styles.cancelBtn} onClick={() => router.push("/admin/schedules")} disabled={submitting}>
                   Cancel
                 </button>
               </div>

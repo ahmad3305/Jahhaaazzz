@@ -59,7 +59,7 @@ export default function ShiftsListPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <div style={styles.title}>All Shifts</div>
-          <button style={styles.addShiftBtn} onClick={() => router.push("/(admin)/staff/shifts/create")}>
+          <button style={styles.addShiftBtn} onClick={() => router.push("/admin/staff/shifts/create")}>
             + Add Shift
           </button>
         </div>
@@ -126,7 +126,7 @@ export default function ShiftsListPage() {
                         <button
                           style={styles.actionBtn}
                           onClick={() =>
-                            router.push(`/(admin)/staff/shifts/${shift.shift_id}/edit`)
+                            router.push(`/admin/staff/shifts/${shift.shift_id}/edit`)
                           }
                         >
                           Edit
@@ -140,7 +140,7 @@ export default function ShiftsListPage() {
           )}
         </div>
         <div style={styles.actionBar}>
-          <button type="button" style={styles.cancelBtn} onClick={() => router.push("/(admin)/staff")}>
+          <button type="button" style={styles.cancelBtn} onClick={() => router.push("/admin/staff")}>
             Back to Staff List
           </button>
         </div>

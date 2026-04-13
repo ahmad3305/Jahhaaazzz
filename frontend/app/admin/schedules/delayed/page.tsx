@@ -106,7 +106,7 @@ export default function DelayedSchedulesPage() {
                         {s.delay_reason !== "Crew Issue" ? (
                           <button
                             style={styles.rescheduleBtn}
-                            onClick={() => router.push(`/(admin)/schedules/${s.flight_schedule_id}/edit`)}
+                            onClick={() => router.push(`/admin/schedules/${s.flight_schedule_id}/edit`)}
                           >
                             Reschedule
                           </button>

@@ -77,7 +77,7 @@ export default function StaffEditPage() {
         if (json.errors && Array.isArray(json.errors)) setApiErrors(json.errors);
         throw new Error(json.message);
       }
-      router.push("/(admin)/staff");
+      router.push("/admin/staff");
     } catch (e: any) {
       setError(e?.message || "Failed to update staff.");
     } finally {
@@ -205,7 +205,7 @@ export default function StaffEditPage() {
                 <button
                   type="button"
                   style={styles.cancelBtn}
-                  onClick={() => router.push("/(admin)/staff")}
+                  onClick={() => router.push("/admin/staff")}
                   disabled={saving}
                 >
                   Cancel

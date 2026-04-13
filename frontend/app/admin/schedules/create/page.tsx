@@ -149,7 +149,7 @@ export default function CreateSchedulePage() {
         else setError(json.message || "Failed to create schedule.");
         return;
       }
-      router.push(`/(admin)/schedules/${json.data.flight_schedule_id}/edit`);
+      router.push(`/admin/schedules/${json.data.flight_schedule_id}/edit`);
     } catch (e: any) {
       setError(e?.message || "Failed to create schedule.");
     } finally {
@@ -332,7 +332,7 @@ export default function CreateSchedulePage() {
                 <button
                   type="button"
                   style={styles.cancelBtn}
-                  onClick={() => router.push("/(admin)/schedules")}
+                  onClick={() => router.push("/admin/schedules")}
                   disabled={submitting}
                 >
                   Cancel
