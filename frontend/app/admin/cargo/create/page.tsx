@@ -87,7 +87,7 @@ export default function CreateCargoPage() {
         if (json.errors && Array.isArray(json.errors)) setApiErrors(json.errors);
         throw new Error(json.message);
       }
-      router.push("/(admin)/cargo");
+      router.push("/admin/cargo");
     } catch (e: any) {
       setError(e?.message || "Failed to create cargo.");
     } finally {
@@ -268,7 +268,7 @@ export default function CreateCargoPage() {
               <button type="submit" style={styles.submitBtn} disabled={submitting}>
                 {submitting ? "Saving..." : "Add Cargo"}
               </button>
-              <button type="button" style={styles.cancelBtn} disabled={submitting} onClick={() => router.push("/(admin)/cargo")}>Cancel</button>
+              <button type="button" style={styles.cancelBtn} disabled={submitting} onClick={() => router.push("/admin/cargo")}>Cancel</button>
             </div>
           </form>
         </div>

@@ -104,7 +104,7 @@ export default function CreateFlightPage() {
         else setError(json.message || "Failed to create flight.");
         return;
       }
-      router.push(`/(admin)/flights/${json.data.flight_id}`);
+      router.push(`/admin/flights/${json.data.flight_id}`);
     } catch (e: any) {
       setError(e?.message || "Failed to create flight.");
     } finally {
@@ -227,7 +227,7 @@ export default function CreateFlightPage() {
                 <button
                   type="button"
                   style={styles.cancelBtn}
-                  onClick={() => router.push("/(admin)/flights")}
+                  onClick={() => router.push("/admin/flights")}
                   disabled={submitting}
                 >
                   Cancel

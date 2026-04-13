@@ -1,22 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   getAllAircraftTypes,
-  AircraftType,
-  Aircraft
+  AircraftType
 } from "@/app/services/aircraft.service";
 import { API_BASE } from "@/app/config";
 
 type Airline = { airline_id: number; airline_name: string; airline_code: string };
 type Airport = { airport_id: number; airport_name: string; airport_code: string; city: string };
 
-export default function EditAircraftPage() {
+export default function CreateAircraftPage() {
   const router = useRouter();
-  const params = useParams();
 
-  const [aircraft, setAircraft] = useState<Aircraft | null>(null);
   const [registration_number, setRegistrationNumber] = useState("");
   const [airline_id, setAirlineId] = useState<number | "">("");
   const [aircraft_type_id, setAircraftTypeId] = useState<number | "">("");
@@ -33,55 +30,38 @@ export default function EditAircraftPage() {
   const [aircraftTypes, setAircraftTypes] = useState<AircraftType[]>([]);
   const [airlines, setAirlines] = useState<Airline[]>([]);
   const [airports, setAirports] = useState<Airport[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadDropdowns() {
       setLoading(true); setError("");
       try {
         const token = localStorage.getItem("token") || "";
-        const [types, als, aps, acft] = await Promise.all([
+        const [types, als, aps] = await Promise.all([
           getAllAircraftTypes(token),
           fetch(`${API_BASE}/airlines`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-          fetch(`${API_BASE}/airports`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-          fetch(`${API_BASE}/aircraft/${params.id}`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
+          fetch(`${API_BASE}/airports`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
         ]);
         setAircraftTypes(types);
         setAirlines(Array.isArray(als.data) ? als.data : []);
         setAirports(Array.isArray(aps.data) ? aps.data : []);
-        if (!acft.success) throw new Error(acft.message || "Failed to load aircraft");
-        setAircraft(acft.data);
-        setRegistrationNumber(acft.data.registration_number ?? "");
-        setAirlineId(acft.data.airline_id ?? "");
-        setAircraftTypeId(acft.data.aircraft_type_id ?? "");
-        setCurrentAirport(acft.data.current_airport ?? "");
-        setStatus(acft.data.status ?? "Active");
-        setEconomySeats(acft.data.economy_seats ?? "");
-        setBusinessSeats(acft.data.business_seats ?? "");
-        setFirstClassSeats(acft.data.first_class_seats ?? "");
-        setMaxSpeedKmh(acft.data.max_speed_kmh ?? "");
-        setFuelCapacityLitres(acft.data.fuel_capacity_litres ?? "");
-        setManufacturedDate(acft.data.manufactered_date ? acft.data.manufactered_date.slice(0,10) : "");
-        setLatestMaintenance(acft.data.latest_maintenance ? acft.data.latest_maintenance.slice(0,10) : "");
-        setNextMaintenanceDue(acft.data.next_maintenance_due ? acft.data.next_maintenance_due.slice(0,10) : "");
       } catch (e: any) {
-        setError(e?.message || "Failed to load form data.");
+        setError(e?.message || "Failed to load dropdown data");
       } finally {
         setLoading(false);
       }
     }
-    loadData();
-  }, [params.id]);
+    loadDropdowns();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setValidationErrors([]); setError("");
-    if (!aircraft) return;
 
+    // Client validation
     const errs: string[] = [];
     if (!registration_number) errs.push("Registration number required");
     if (!airline_id) errs.push("Airline required");
@@ -99,8 +79,8 @@ export default function EditAircraftPage() {
 
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`${API_BASE}/aircraft/${aircraft.aircraft_id}`, {
-        method: "PUT",
+      const res = await fetch(`${API_BASE}/aircraft`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           registration_number,
@@ -121,12 +101,12 @@ export default function EditAircraftPage() {
       const json = await res.json();
       if (!res.ok || !json.success) {
         if (Array.isArray(json.errors)) setValidationErrors(json.errors);
-        else setError(json.message || "Failed to update aircraft.");
+        else setError(json.message || "Failed to create aircraft.");
         return;
       }
-      router.push("/(admin)/aircraft");
+      router.push("/admin/aircraft");
     } catch (e: any) {
-      setError(e?.message || "Failed to update aircraft.");
+      setError(e?.message || "Failed to create aircraft.");
     } finally {
       setSubmitting(false);
     }
@@ -135,16 +115,16 @@ export default function EditAircraftPage() {
   return (
     <div style={styles.bg}>
       <div style={styles.shell}>
-        <h1 style={styles.title}>✏️ Edit Aircraft</h1>
+        <h1 style={styles.title}>✈️ Add New Aircraft</h1>
         <div style={styles.card}>
-          {error && <div style={styles.error}>{error}</div>}
-          {validationErrors.length > 0 && (
-            <div style={styles.errorList}>{validationErrors.map((e, i) => <div key={i}>• {e}</div>)}</div>
-          )}
-          {loading || !aircraft ? (
-            <div style={styles.loading}>Loading...</div>
-          ) : (
-            <form onSubmit={handleSubmit} style={styles.form}>
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {error && <div style={styles.error}>{error}</div>}
+            {validationErrors.length > 0 && (
+              <div style={styles.errorList}>{validationErrors.map((e, i) => <div key={i}>• {e}</div>)}</div>
+            )}
+            {loading ? (
+              <div style={styles.loading}>Loading data...</div>
+            ) : (
               <div style={styles.fieldsGrid}>
                 <div style={styles.labelGroup}>
                   <label style={styles.label}>Registration Number</label>
@@ -223,21 +203,21 @@ export default function EditAircraftPage() {
                   <input style={styles.input} type="date" value={next_maintenance_due} onChange={e => setNextMaintenanceDue(e.target.value)} />
                 </div>
               </div>
-              <div style={styles.actionBar}>
-                <button type="submit" style={styles.submitBtn} disabled={submitting || loading}>
-                  {submitting ? "Updating..." : "Update Aircraft"}
-                </button>
-                <button
-                  type="button"
-                  style={styles.cancelBtn}
-                  onClick={() => router.push("/(admin)/aircraft")}
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+            )}
+            <div style={styles.actionBar}>
+              <button type="submit" style={styles.submitBtn} disabled={submitting || loading}>
+                {submitting ? "Creating..." : "Add Aircraft"}
+              </button>
+              <button
+                type="button"
+                style={styles.cancelBtn}
+                onClick={() => router.push("/admin/aircraft")}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

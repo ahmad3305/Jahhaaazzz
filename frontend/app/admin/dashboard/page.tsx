@@ -5,16 +5,16 @@ import { useRouter, usePathname } from "next/navigation";
 import { API_BASE } from "@/app/config";
 
 const ADMIN_LINKS: { label: string; url: string; icon: string }[] = [
-  { label: "Dashboard", icon: "🏠", url: "/(admin)/dashboard" },
-  { label: "Analytics", icon: "📊", url: "/(admin)/analytics" },
-  { label: "Flights", icon: "🛩️", url: "/(admin)/flights" },
-  { label: "Schedules", icon: "📅", url: "/(admin)/schedules" },
-  { label: "Airports", icon: "🛬", url: "/(admin)/airports" },
-  { label: "Aircraft", icon: "✈️", url: "/(admin)/aircraft" },
-  { label: "Staff", icon: "👔", url: "/(admin)/staff" },
-  { label: "Crew", icon: "👨‍✈️", url: "/(admin)/crew" },
-  { label: "Cargo", icon: "📦", url: "/(admin)/cargo" },
-  { label: "Payments", icon: "💳", url: "/(admin)/payments" },
+  { label: "Dashboard", icon: "🏠", url: "/admin/dashboard" },
+  { label: "Analytics", icon: "📊", url: "/admin/analytics" },
+  { label: "Flights", icon: "🛩️", url: "/admin/flights" },
+  { label: "Schedules", icon: "📅", url: "/admin/schedules" },
+  { label: "Airports", icon: "🛬", url: "/admin/airports" },
+  { label: "Aircraft", icon: "✈️", url: "/admin/aircraft" },
+  { label: "Staff", icon: "👔", url: "/admin/staff" },
+  { label: "Crew", icon: "👨‍✈️", url: "/admin/crew" },
+  { label: "Cargo", icon: "📦", url: "/admin/cargo" },
+  { label: "Payments", icon: "💳", url: "/admin/payments" },
 ];
 
 type Metrics = {
@@ -142,63 +142,63 @@ export default function AdminDashboardPage() {
               label="Total Flights"
               value={metrics.totalFlights}
               accent="#60a5fa"
-              onClick={() => router.push("/(admin)/flights")}
+              onClick={() => router.push("/admin/flights")}
               icon="🛩️"
             />
             <StatCard
               label="Total Schedules"
               value={metrics.totalSchedules}
               accent="#06d6a0"
-              onClick={() => router.push("/(admin)/schedules")}
+              onClick={() => router.push("/admin/schedules")}
               icon="📅"
             />
             <StatCard
               label="Upcoming Flights"
               value={metrics.upcomingFlights}
               accent="#84cc16"
-              onClick={() => router.push("/(admin)/schedules")}
+              onClick={() => router.push("/admin/schedules")}
               icon="⏰"
             />
             <StatCard
               label="Delayed Flights"
               value={metrics.delayedFlights}
               accent="#fbbf24"
-              onClick={() => router.push("/(admin)/schedules/delayed")}
+              onClick={() => router.push("/admin/schedules/delayed")}
               icon="⏳"
             />
             <StatCard
               label="Cancelled Flights"
               value={metrics.cancelledFlights}
               accent="#f87171"
-              onClick={() => router.push("/(admin)/schedules")}
+              onClick={() => router.push("/admin/schedules")}
               icon="❌"
             />
             <StatCard
               label="Completed Flights"
               value={metrics.completedFlights}
               accent="#38bdf8"
-              onClick={() => router.push("/(admin)/schedules")}
+              onClick={() => router.push("/admin/schedules")}
               icon="✅"
             />
             <StatCard
               label="Total Aircraft"
               value={metrics.totalAircraft}
               accent="#f472b6"
-              onClick={() => router.push("/(admin)/aircraft")}
+              onClick={() => router.push("/admin/aircraft")}
               icon="✈️"
             />
             <StatCard
               label="Total Staff"
               value={metrics.totalStaff}
               accent="#c084fc"
-              onClick={() => router.push("/(admin)/staff")}
+              onClick={() => router.push("/admin/staff")}
               icon="👔"
             />
             <StatCard
               label="Airports"
               value={metrics.totalAirports}
               accent="#fca5a5"
-              onClick={() => router.push("/(admin)/airports")}
+              onClick={() => router.push("/admin/airports")}
               icon="🛬"
             />
           </div>

@@ -46,7 +46,7 @@ export default function AirportsPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <h1 style={styles.title}>🛬 Airports Management</h1>
-          <button style={styles.createBtn} onClick={() => router.push("/(admin)/airports/create")}>+ Add Airport</button>
+          <button style={styles.createBtn} onClick={() => router.push("/admin/airports/create")}>+ Add Airport</button>
         </div>
         {error && <div style={styles.error}>{error}</div>}
         {deleteError && <div style={styles.error}>{deleteError}</div>}
@@ -83,7 +83,7 @@ export default function AirportsPage() {
                       <td>
                         <button
                           style={styles.editBtn}
-                          onClick={() => router.push(`/(admin)/airports/${ap.airport_id}/edit`)}
+                          onClick={() => router.push(`/admin/airports/${ap.airport_id}/edit`)}
                         >Edit</button>
                         <button
                           style={styles.deleteBtn}

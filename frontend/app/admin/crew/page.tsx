@@ -43,7 +43,7 @@ export default function CrewPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <h1 style={styles.title}>👨‍✈️ Crew Directory</h1>
-          <button style={styles.createBtn} onClick={() => router.push("/(admin)/staff/create")}>
+          <button style={styles.createBtn} onClick={() => router.push("/admin/staff/create")}>
             + Add Staff
           </button>
         </div>
@@ -118,7 +118,7 @@ export default function CrewPage() {
                       <td>
                         <button
                           style={styles.actionBtn}
-                          onClick={() => router.push(`/(admin)/staff/${s.staff_id}/edit`)}
+                          onClick={() => router.push(`/admin/staff/${s.staff_id}/edit`)}
                         >
                           Edit
                         </button>

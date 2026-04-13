@@ -46,7 +46,7 @@ export default function AircraftPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <h1 style={styles.title}>🛩️ Aircraft Inventory</h1>
-          <button style={styles.createBtn} onClick={() => router.push("/(admin)/aircraft/create")}>+ Add Aircraft</button>
+          <button style={styles.createBtn} onClick={() => router.push("/admin/aircraft/create")}>+ Add Aircraft</button>
         </div>
         {error && <div style={styles.error}>{error}</div>}
         {deleteError && <div style={styles.error}>{deleteError}</div>}
@@ -134,7 +134,7 @@ export default function AircraftPage() {
                       <td>
                         <button
                           style={styles.editBtn}
-                          onClick={() => router.push(`/(admin)/aircraft/${a.aircraft_id}/edit`)}
+                          onClick={() => router.push(`/admin/aircraft/${a.aircraft_id}/edit`)}
                         >Edit</button>
                         <button
                           style={styles.deleteBtn}

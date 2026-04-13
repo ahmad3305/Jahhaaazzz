@@ -31,7 +31,7 @@ export default function FlightsAdminPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <h1 style={styles.title}>🛫 Flights</h1>
-          <button style={styles.createBtn} onClick={() => router.push("/(admin)/flights/create")}>
+          <button style={styles.createBtn} onClick={() => router.push("/admin/flights/create")}>
             + Create Flight
           </button>
         </div>
@@ -67,7 +67,7 @@ export default function FlightsAdminPage() {
                       key={f.flight_id}
                       style={{ cursor: "pointer" }}
                       tabIndex={0}
-                      onClick={() => router.push(`/(admin)/flights/${f.flight_id}`)}
+                      onClick={() => router.push(`/admin/flights/${f.flight_id}`)}
                     >
                       <td>
                         <span style={{ fontWeight: 600 }}>{f.airline_name}</span>
@@ -109,7 +109,7 @@ export default function FlightsAdminPage() {
                       <td>
                         <span style={styles.viewBtn} onClick={e => {
                           e.stopPropagation();
-                          router.push(`/(admin)/flights/${f.flight_id}`);
+                          router.push(`/admin/flights/${f.flight_id}`);
                         }}>
                           View
                         </span>

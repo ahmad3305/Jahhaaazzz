@@ -56,7 +56,7 @@ export default function CargoListPage() {
       <div style={styles.shell}>
         <div style={styles.headerBar}>
           <div style={styles.title}>All Cargo</div>
-          <button style={styles.addBtn} onClick={() => router.push("/(admin)/cargo/create")}>+ Add Cargo</button>
+          <button style={styles.addBtn} onClick={() => router.push("/admin/cargo/create")}>+ Add Cargo</button>
         </div>
         <div style={styles.card}>
           {error && <div style={styles.error}>{error}</div>}
@@ -96,7 +96,7 @@ export default function CargoListPage() {
                       <td style={styles.td}>{c.status}</td>
                       <td style={styles.td}>{c.is_insured ? "Yes" : "No"}</td>
                       <td style={styles.td}>
-                        <button style={styles.actionBtn} onClick={() => router.push(`/(admin)/cargo/${c.cargo_id}/edit`)}>
+                        <button style={styles.actionBtn} onClick={() => router.push(`/admin/cargo/${c.cargo_id}/edit`)}>
                           Edit
                         </button>
                       </td>
